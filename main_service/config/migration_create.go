@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-// make migrate-create name=add_code_to_regions
+// make migrate name=add_code_to_regions
 // # ✅ Migration created: config/migrations/002_add_code_to_regions.sql
 
 const migrationsDir = "config/migrations"
