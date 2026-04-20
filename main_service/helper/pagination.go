@@ -25,28 +25,43 @@ type PageMeta struct {
 
 func ParsePage(r *http.Request, validCols map[string]string, defaultCol string) PageQuery {
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	if page < 1 {
-		page = 1
+	{
+		if page < 1 {
+			page = 1
+		}
 	}
+
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	if limit < 1 || limit > 100 {
-		limit = 10
+	{
+		if limit < 1 || limit > 100 {
+			limit = 10
+		}
 	}
+
 	col, ok := validCols[r.URL.Query().Get("sort_by")]
-	if !ok {
-		col = defaultCol
+	{
+		if !ok {
+			col = defaultCol
+		}
 	}
+
 	sortOrder := strings.ToUpper(r.URL.Query().Get("sort_order"))
-	if sortOrder != "DESC" {
-		sortOrder = "ASC"
+	{
+		if sortOrder != "DESC" {
+			sortOrder = "ASC"
+		}
 	}
+
 	return PageQuery{Page: page, Limit: limit, SortCol: col, SortOrder: sortOrder}
 }
 
 func NewPageMeta(total int64, page, limit int) PageMeta {
 	tp := int64(math.Ceil(float64(total) / float64(limit)))
-	if total == 0 {
-		tp = 0
+	{
+		if total == 0 {
+			tp = 0
+		}
 	}
+
 	return PageMeta{Total: total, Page: page, Limit: limit, TotalPages: tp}
 }
