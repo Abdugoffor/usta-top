@@ -208,7 +208,7 @@ func (s *countryService) ListTree(ctx context.Context, parentID *int64, f countr
 		args = append(args, *parentID)
 		idx++
 	} else {
-		conditions = append(conditions, "c.parent_id IS NULL")
+		conditions = append(conditions, "c.parent_id = 0")
 	}
 
 	if f.Name != "" {

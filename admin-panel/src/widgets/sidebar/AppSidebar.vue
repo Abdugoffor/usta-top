@@ -22,6 +22,11 @@ import { Icon } from '@iconify/vue'
         <Icon icon="mdi:shape-outline" />
         <span>Categories</span>
       </RouterLink>
+
+      <RouterLink to="/countries" class="sidebar__link">
+        <Icon icon="mdi:earth" />
+        <span>Countries</span>
+      </RouterLink>
     </nav>
   </aside>
 </template>

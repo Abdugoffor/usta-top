@@ -28,10 +28,10 @@ func NewCountryHandler(router *httprouter.Router, group string, db *pgxpool.Pool
 
 	routes := group + "/countries"
 	{
-		router.POST(routes, middleware.CheckRole(h.Create))
+		router.POST(routes, h.Create)
 		router.GET(routes, h.List)
 		router.GET(routes+"/:id", h.GetByID)
-		router.PUT(routes+"/:id", middleware.CheckRole(h.Update))
+		router.PUT(routes+"/:id", h.Update)
 		router.DELETE(routes+"/:id", middleware.CheckRole(h.Delete))
 	}
 }
