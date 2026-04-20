@@ -30,13 +30,13 @@ func NewResumeHandler(router *httprouter.Router, group string, db *pgxpool.Pool)
 
 	routes := group + "/resumes"
 	{
-		router.POST(routes, middleware.Auth(h.Create))
+		router.POST(routes, middleware.CheckRole(h.Create))
 		router.GET(routes, h.List)
 		router.GET(routes+"/:slug", h.GetBySlug)
-		router.PUT(routes+"/:id", middleware.Auth(h.Update))
-		router.DELETE(routes+"/:id", middleware.Auth(h.Delete))
-		router.POST(routes+"/:id/categories", middleware.Auth(h.AddCategory))
-		router.DELETE(routes+"/:id/categories/:cat_id", middleware.Auth(h.RemoveCategory))
+		router.PUT(routes+"/:id", middleware.CheckRole(h.Update))
+		router.DELETE(routes+"/:id", middleware.CheckRole(h.Delete))
+		router.POST(routes+"/:id/categories", middleware.CheckRole(h.AddCategory))
+		router.DELETE(routes+"/:id/categories/:cat_id", middleware.CheckRole(h.RemoveCategory))
 	}
 }
 

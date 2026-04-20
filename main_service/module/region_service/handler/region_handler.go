@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"main_service/middleware"
 	region_dto "main_service/module/region_service/dto"
 	region_service "main_service/module/region_service/service"
 
@@ -26,11 +27,11 @@ func NewRegionHandler(router *httprouter.Router, group string, db *pgxpool.Pool)
 
 	routes := group + "/regions"
 	{
-		router.POST(routes, h.Create)
+		router.POST(routes, middleware.CheckRole(h.Create))
 		router.GET(routes, h.List)
-		router.GET(routes+"/:id", h.GetByID)
-		router.PUT(routes+"/:id", h.Update)
-		router.DELETE(routes+"/:id", h.Delete)
+		router.GET(routes+"/:id", middleware.CheckRole(h.GetByID))
+		router.PUT(routes+"/:id", middleware.CheckRole(h.Update))
+		router.DELETE(routes+"/:id", middleware.CheckRole(h.Delete))
 	}
 }
 

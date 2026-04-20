@@ -53,9 +53,11 @@ func (h *userHandler) Register(w http.ResponseWriter, r *http.Request, _ httprou
 // POST /api/v1/auth/login
 func (h *userHandler) Login(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var req user_dto.LoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		helper.WriteError(w, http.StatusBadRequest, "invalid JSON")
-		return
+	{
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			helper.WriteError(w, http.StatusBadRequest, "invalid JSON")
+			return
+		}
 	}
 
 	if errs := helper.ValidateStruct(req); errs != nil {
@@ -64,9 +66,11 @@ func (h *userHandler) Login(w http.ResponseWriter, r *http.Request, _ httprouter
 	}
 
 	resp, err := h.service.Login(r.Context(), req)
-	if err != nil {
-		helper.WriteError(w, http.StatusUnauthorized, err.Error())
-		return
+	{
+		if err != nil {
+			helper.WriteError(w, http.StatusUnauthorized, err.Error())
+			return
+		}
 	}
 
 	helper.WriteJSON(w, http.StatusOK, resp)

@@ -79,6 +79,7 @@ func (s *userService) Login(ctx context.Context, req user_dto.LoginRequest) (*us
 		user     user_model.User
 		password string
 	)
+
 	err := s.db.QueryRow(ctx, `
 		SELECT id, full_name, phone, password, role, is_active, created_at, updated_at, deleted_at
 		FROM users
@@ -87,6 +88,7 @@ func (s *userService) Login(ctx context.Context, req user_dto.LoginRequest) (*us
 		&user.ID, &user.FullName, &user.Phone, &password,
 		&user.Role, &user.IsActive, &user.CreatedAt, &user.UpdatedAt, &user.DeletedAt,
 	)
+
 	if err != nil {
 		return nil, fmt.Errorf("phone yoki parol noto'g'ri")
 	}

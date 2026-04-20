@@ -26,12 +26,14 @@ var sortCols = map[string]string{
 func NewCountryHandler(router *httprouter.Router, group string, db *pgxpool.Pool) {
 	h := &countryHandler{service: country_service.NewCountryService(db)}
 
-	base := group + "/countries"
-	router.POST(base, middleware.Auth(h.Create))
-	router.GET(base, h.List)
-	router.GET(base+"/:id", h.GetByID)
-	router.PUT(base+"/:id", middleware.Auth(h.Update))
-	router.DELETE(base+"/:id", middleware.Auth(h.Delete))
+	routes := group + "/countries"
+	{
+		router.POST(routes, middleware.CheckRole(h.Create))
+		router.GET(routes, h.List)
+		router.GET(routes+"/:id", h.GetByID)
+		router.PUT(routes+"/:id", middleware.CheckRole(h.Update))
+		router.DELETE(routes+"/:id", middleware.CheckRole(h.Delete))
+	}
 }
 
 // Create godoc
@@ -48,21 +50,29 @@ func NewCountryHandler(router *httprouter.Router, group string, db *pgxpool.Pool
 // @Router       /countries [post]
 func (h *countryHandler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var req country_dto.CreateCountryRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		helper.WriteError(w, http.StatusBadRequest, "invalid JSON")
-		return
+	{
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			helper.WriteError(w, http.StatusBadRequest, "invalid JSON")
+			return
+		}
 	}
+
 	req.Name = strings.TrimSpace(req.Name)
-	if errs := helper.ValidateStruct(req); errs != nil {
-		helper.WriteValidation(w, errs)
-		return
+	{
+		if errs := helper.ValidateStruct(req); errs != nil {
+			helper.WriteValidation(w, errs)
+			return
+		}
 	}
 
 	resp, err := h.service.Create(r.Context(), req)
-	if err != nil {
-		helper.WriteError(w, http.StatusInternalServerError, err.Error())
-		return
+	{
+		if err != nil {
+			helper.WriteError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
+
 	helper.WriteJSON(w, http.StatusCreated, resp)
 }
 
@@ -87,6 +97,7 @@ func (h *countryHandler) List(w http.ResponseWriter, r *http.Request, _ httprout
 	f := country_dto.CountryFilter{
 		Name: q.Get("name"),
 	}
+
 	if v := q.Get("is_active"); v != "" {
 		if b, err := strconv.ParseBool(v); err == nil {
 			f.IsActive = &b
@@ -94,6 +105,7 @@ func (h *countryHandler) List(w http.ResponseWriter, r *http.Request, _ httprout
 	}
 
 	var parentID *int64
+
 	if v := q.Get("parent_id"); v != "" {
 		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
 			parentID = &n
@@ -101,10 +113,13 @@ func (h *countryHandler) List(w http.ResponseWriter, r *http.Request, _ httprout
 	}
 
 	items, total, err := h.service.ListTree(r.Context(), parentID, f, pq.Page, pq.Limit, pq.SortCol, pq.SortOrder)
-	if err != nil {
-		helper.WriteError(w, http.StatusInternalServerError, err.Error())
-		return
+	{
+		if err != nil {
+			helper.WriteError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
+
 	helper.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"data": items,
 		"meta": helper.NewPageMeta(total, pq.Page, pq.Limit),
@@ -122,15 +137,21 @@ func (h *countryHandler) List(w http.ResponseWriter, r *http.Request, _ httprout
 // @Router       /countries/{id} [get]
 func (h *countryHandler) GetByID(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
-	if err != nil || id <= 0 {
-		helper.WriteError(w, http.StatusBadRequest, "invalid id")
-		return
+	{
+		if err != nil || id <= 0 {
+			helper.WriteError(w, http.StatusBadRequest, "invalid id")
+			return
+		}
 	}
+
 	resp, err := h.service.GetByID(r.Context(), id)
-	if err != nil {
-		helper.WriteError(w, http.StatusNotFound, "country not found")
-		return
+	{
+		if err != nil {
+			helper.WriteError(w, http.StatusNotFound, "country not found")
+			return
+		}
 	}
+
 	helper.WriteJSON(w, http.StatusOK, resp)
 }
 
@@ -149,30 +170,39 @@ func (h *countryHandler) GetByID(w http.ResponseWriter, r *http.Request, ps http
 // @Router       /countries/{id} [put]
 func (h *countryHandler) Update(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
-	if err != nil || id <= 0 {
-		helper.WriteError(w, http.StatusBadRequest, "invalid id")
-		return
+	{
+		if err != nil || id <= 0 {
+			helper.WriteError(w, http.StatusBadRequest, "invalid id")
+			return
+		}
 	}
 
 	var req country_dto.UpdateCountryRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		helper.WriteError(w, http.StatusBadRequest, "invalid JSON")
-		return
+	{
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			helper.WriteError(w, http.StatusBadRequest, "invalid JSON")
+			return
+		}
 	}
+
 	if req.Name != nil {
 		trimmed := strings.TrimSpace(*req.Name)
 		req.Name = &trimmed
 	}
+
 	if errs := helper.ValidateStruct(req); errs != nil {
 		helper.WriteValidation(w, errs)
 		return
 	}
 
 	resp, err := h.service.Update(r.Context(), id, req)
-	if err != nil {
-		helper.WriteError(w, http.StatusNotFound, "country not found")
-		return
+	{
+		if err != nil {
+			helper.WriteError(w, http.StatusNotFound, "country not found")
+			return
+		}
 	}
+
 	helper.WriteJSON(w, http.StatusOK, resp)
 }
 
@@ -189,13 +219,17 @@ func (h *countryHandler) Update(w http.ResponseWriter, r *http.Request, ps httpr
 // @Router       /countries/{id} [delete]
 func (h *countryHandler) Delete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
-	if err != nil || id <= 0 {
-		helper.WriteError(w, http.StatusBadRequest, "invalid id")
-		return
+	{
+		if err != nil || id <= 0 {
+			helper.WriteError(w, http.StatusBadRequest, "invalid id")
+			return
+		}
 	}
+
 	if err := h.service.Delete(r.Context(), id); err != nil {
 		helper.WriteError(w, http.StatusNotFound, err.Error())
 		return
 	}
+
 	helper.WriteJSON(w, http.StatusOK, map[string]string{"message": "deleted"})
 }

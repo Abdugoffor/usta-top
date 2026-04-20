@@ -29,11 +29,11 @@ func NewVacancyHandler(router *httprouter.Router, group string, db *pgxpool.Pool
 
 	routes := group + "/vacancies"
 	{
-		router.POST(routes, middleware.Auth(h.Create))
+		router.POST(routes, middleware.CheckRole(h.Create))
 		router.GET(routes, h.List)
 		router.GET(routes+"/:slug", h.GetBySlug)
-		router.PUT(routes+"/:id", middleware.Auth(h.Update))
-		router.DELETE(routes+"/:id", middleware.Auth(h.Delete))
+		router.PUT(routes+"/:id", middleware.CheckRole(h.Update))
+		router.DELETE(routes+"/:id", middleware.CheckRole(h.Delete))
 	}
 }
 

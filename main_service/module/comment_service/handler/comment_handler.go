@@ -22,11 +22,11 @@ func NewCommentHandler(router *httprouter.Router, group string, db *pgxpool.Pool
 
 	routes := group + "/comments"
 	{
-		router.POST(routes, middleware.Auth(h.Create))
+		router.POST(routes, middleware.CheckRole(h.Create))
 		router.GET(routes, h.List)
 		router.GET(routes+"/:id", h.GetByID)
-		router.PUT(routes+"/:id", middleware.Auth(h.Update))
-		router.DELETE(routes+"/:id", middleware.Auth(h.Delete))
+		router.PUT(routes+"/:id", middleware.CheckRole(h.Update))
+		router.DELETE(routes+"/:id", middleware.CheckRole(h.Delete))
 	}
 }
 
