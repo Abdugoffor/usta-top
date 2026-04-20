@@ -25,6 +25,7 @@ import (
 	"main_service/config"
 	_ "main_service/docs"
 	"main_service/helper"
+	"main_service/middleware"
 	categorya_cmd "main_service/module/categorya_service"
 	comment_cmd "main_service/module/comment_service"
 	country_cmd "main_service/module/country_service"
@@ -79,5 +80,5 @@ func main() {
 
 	log.Printf("🚀 Server started on :%s", port)
 	log.Printf("📖 Swagger UI: http://localhost:%s/swagger/index.html", port)
-	log.Fatal(http.ListenAndServe(":"+port, router))
+	log.Fatal(http.ListenAndServe(":"+port, middleware.CORS(router)))
 }

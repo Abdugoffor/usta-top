@@ -51,24 +51,31 @@ func (h *commentHandler) Create(w http.ResponseWriter, r *http.Request, _ httpro
 	}
 
 	var req comment_dto.CreateCommentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		helper.WriteError(w, http.StatusBadRequest, "invalid JSON")
-		return
+	{
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			helper.WriteError(w, http.StatusBadRequest, "invalid JSON")
+			return
+		}
 	}
+
 	if req.VakansiyaID == nil && req.ResumeID == nil {
 		helper.WriteError(w, http.StatusUnprocessableEntity, "vakansiya_id or resume_id required")
 		return
 	}
+
 	if errs := helper.ValidateStruct(req); errs != nil {
 		helper.WriteValidation(w, errs)
 		return
 	}
 
 	resp, err := h.service.Create(r.Context(), int64(userID), req)
-	if err != nil {
-		helper.WriteError(w, http.StatusInternalServerError, err.Error())
-		return
+	{
+		if err != nil {
+			helper.WriteError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
+
 	helper.WriteJSON(w, http.StatusCreated, resp)
 }
 
@@ -89,28 +96,37 @@ func (h *commentHandler) List(w http.ResponseWriter, r *http.Request, _ httprout
 	q := r.URL.Query()
 
 	page, _ := strconv.Atoi(q.Get("page"))
-	if page < 1 {
-		page = 1
+	{
+		if page < 1 {
+			page = 1
+		}
 	}
+
 	limit, _ := strconv.Atoi(q.Get("limit"))
-	if limit < 1 || limit > 100 {
-		limit = 20
+	{
+		if limit < 1 || limit > 100 {
+			limit = 20
+		}
 	}
 
 	f := comment_dto.CommentFilter{Type: q.Get("type")}
-	if v := q.Get("vakansiya_id"); v != "" {
-		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
-			f.VakansiyaID = &n
+	{
+		if v := q.Get("vakansiya_id"); v != "" {
+			if n, err := strconv.ParseInt(v, 10, 64); err == nil {
+				f.VakansiyaID = &n
+			}
 		}
-	}
-	if v := q.Get("resume_id"); v != "" {
-		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
-			f.ResumeID = &n
+
+		if v := q.Get("resume_id"); v != "" {
+			if n, err := strconv.ParseInt(v, 10, 64); err == nil {
+				f.ResumeID = &n
+			}
 		}
-	}
-	if v := q.Get("user_id"); v != "" {
-		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
-			f.UserID = &n
+
+		if v := q.Get("user_id"); v != "" {
+			if n, err := strconv.ParseInt(v, 10, 64); err == nil {
+				f.UserID = &n
+			}
 		}
 	}
 
@@ -138,16 +154,23 @@ func (h *commentHandler) List(w http.ResponseWriter, r *http.Request, _ httprout
 // @Failure      404  {object}  map[string]string
 // @Router       /comments/{id} [get]
 func (h *commentHandler) GetByID(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
-	if err != nil || id <= 0 {
-		helper.WriteError(w, http.StatusBadRequest, "invalid id")
-		return
+	{
+		if err != nil || id <= 0 {
+			helper.WriteError(w, http.StatusBadRequest, "invalid id")
+			return
+		}
 	}
+
 	resp, err := h.service.GetByID(r.Context(), id)
-	if err != nil {
-		helper.WriteError(w, http.StatusNotFound, "comment not found")
-		return
+	{
+		if err != nil {
+			helper.WriteError(w, http.StatusNotFound, "comment not found")
+			return
+		}
 	}
+
 	helper.WriteJSON(w, http.StatusOK, resp)
 }
 
@@ -165,32 +188,44 @@ func (h *commentHandler) GetByID(w http.ResponseWriter, r *http.Request, ps http
 // @Failure      404   {object}  map[string]string
 // @Router       /comments/{id} [put]
 func (h *commentHandler) Update(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	
 	userID := middleware.GetUserID(r)
-	if userID == 0 {
-		helper.WriteError(w, http.StatusUnauthorized, "unauthorized")
-		return
+	{
+		if userID == 0 {
+			helper.WriteError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
 	}
+
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
-	if err != nil || id <= 0 {
-		helper.WriteError(w, http.StatusBadRequest, "invalid id")
-		return
+	{
+		if err != nil || id <= 0 {
+			helper.WriteError(w, http.StatusBadRequest, "invalid id")
+			return
+		}
 	}
 
 	var req comment_dto.UpdateCommentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		helper.WriteError(w, http.StatusBadRequest, "invalid JSON")
-		return
+	{
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			helper.WriteError(w, http.StatusBadRequest, "invalid JSON")
+			return
+		}
 	}
+
 	if errs := helper.ValidateStruct(req); errs != nil {
 		helper.WriteValidation(w, errs)
 		return
 	}
 
 	resp, err := h.service.Update(r.Context(), id, int64(userID), req)
-	if err != nil {
-		helper.WriteError(w, http.StatusNotFound, err.Error())
-		return
+	{
+		if err != nil {
+			helper.WriteError(w, http.StatusNotFound, err.Error())
+			return
+		}
 	}
+
 	helper.WriteJSON(w, http.StatusOK, resp)
 }
 
@@ -207,18 +242,25 @@ func (h *commentHandler) Update(w http.ResponseWriter, r *http.Request, ps httpr
 // @Router       /comments/{id} [delete]
 func (h *commentHandler) Delete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	userID := middleware.GetUserID(r)
-	if userID == 0 {
-		helper.WriteError(w, http.StatusUnauthorized, "unauthorized")
-		return
+	{
+		if userID == 0 {
+			helper.WriteError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
 	}
+
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
-	if err != nil || id <= 0 {
-		helper.WriteError(w, http.StatusBadRequest, "invalid id")
-		return
+	{
+		if err != nil || id <= 0 {
+			helper.WriteError(w, http.StatusBadRequest, "invalid id")
+			return
+		}
 	}
+
 	if err := h.service.Delete(r.Context(), id, int64(userID)); err != nil {
 		helper.WriteError(w, http.StatusNotFound, err.Error())
 		return
 	}
+
 	helper.WriteJSON(w, http.StatusOK, map[string]string{"message": "deleted"})
 }

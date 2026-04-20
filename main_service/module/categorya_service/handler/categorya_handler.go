@@ -28,10 +28,10 @@ func NewCategoryHandler(router *httprouter.Router, group string, db *pgxpool.Poo
 
 	routes := group + "/categories"
 	{
-		router.POST(routes, middleware.CheckRole(h.Create))
+		router.POST(routes, h.Create)
 		router.GET(routes, h.List)
 		router.GET(routes+"/:id", h.GetByID)
-		router.PUT(routes+"/:id", middleware.CheckRole(h.Update))
+		router.PUT(routes+"/:id", h.Update)
 		router.DELETE(routes+"/:id", middleware.CheckRole(h.Delete))
 	}
 }
@@ -50,21 +50,29 @@ func NewCategoryHandler(router *httprouter.Router, group string, db *pgxpool.Poo
 // @Router       /categories [post]
 func (h *categoryHandler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var req categorya_dto.CreateCategoryRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		helper.WriteError(w, http.StatusBadRequest, "invalid JSON")
-		return
+	{
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			helper.WriteError(w, http.StatusBadRequest, "invalid JSON")
+			return
+		}
 	}
+
 	req.Name = strings.TrimSpace(req.Name)
-	if errs := helper.ValidateStruct(req); errs != nil {
-		helper.WriteValidation(w, errs)
-		return
+	{
+		if errs := helper.ValidateStruct(req); errs != nil {
+			helper.WriteValidation(w, errs)
+			return
+		}
 	}
 
 	resp, err := h.service.Create(r.Context(), req)
-	if err != nil {
-		helper.WriteError(w, http.StatusInternalServerError, err.Error())
-		return
+	{
+		if err != nil {
+			helper.WriteError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
+
 	helper.WriteJSON(w, http.StatusCreated, resp)
 }
 
@@ -83,9 +91,11 @@ func (h *categoryHandler) Create(w http.ResponseWriter, r *http.Request, _ httpr
 // @Router       /categories [get]
 func (h *categoryHandler) List(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	q := r.URL.Query()
+
 	pq := helper.ParsePage(r, sortCols, "c.id")
 
 	f := categorya_dto.CategoryFilter{Name: q.Get("name")}
+
 	if v := q.Get("is_active"); v != "" {
 		if b, err := strconv.ParseBool(v); err == nil {
 			f.IsActive = &b
@@ -93,10 +103,13 @@ func (h *categoryHandler) List(w http.ResponseWriter, r *http.Request, _ httprou
 	}
 
 	items, total, err := h.service.List(r.Context(), f, pq.Page, pq.Limit, pq.SortCol, pq.SortOrder)
-	if err != nil {
-		helper.WriteError(w, http.StatusInternalServerError, err.Error())
-		return
+	{
+		if err != nil {
+			helper.WriteError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
+
 	helper.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"data": items,
 		"meta": helper.NewPageMeta(total, pq.Page, pq.Limit),
@@ -114,15 +127,21 @@ func (h *categoryHandler) List(w http.ResponseWriter, r *http.Request, _ httprou
 // @Router       /categories/{id} [get]
 func (h *categoryHandler) GetByID(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
-	if err != nil || id <= 0 {
-		helper.WriteError(w, http.StatusBadRequest, "invalid id")
-		return
+	{
+		if err != nil || id <= 0 {
+			helper.WriteError(w, http.StatusBadRequest, "invalid id")
+			return
+		}
 	}
+
 	resp, err := h.service.GetByID(r.Context(), id)
-	if err != nil {
-		helper.WriteError(w, http.StatusNotFound, "category not found")
-		return
+	{
+		if err != nil {
+			helper.WriteError(w, http.StatusNotFound, "category not found")
+			return
+		}
 	}
+
 	helper.WriteJSON(w, http.StatusOK, resp)
 }
 
@@ -141,30 +160,39 @@ func (h *categoryHandler) GetByID(w http.ResponseWriter, r *http.Request, ps htt
 // @Router       /categories/{id} [put]
 func (h *categoryHandler) Update(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
-	if err != nil || id <= 0 {
-		helper.WriteError(w, http.StatusBadRequest, "invalid id")
-		return
+	{
+		if err != nil || id <= 0 {
+			helper.WriteError(w, http.StatusBadRequest, "invalid id")
+			return
+		}
 	}
 
 	var req categorya_dto.UpdateCategoryRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		helper.WriteError(w, http.StatusBadRequest, "invalid JSON")
-		return
+	{
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			helper.WriteError(w, http.StatusBadRequest, "invalid JSON")
+			return
+		}
 	}
+
 	if req.Name != nil {
 		trimmed := strings.TrimSpace(*req.Name)
 		req.Name = &trimmed
 	}
+
 	if errs := helper.ValidateStruct(req); errs != nil {
 		helper.WriteValidation(w, errs)
 		return
 	}
 
 	resp, err := h.service.Update(r.Context(), id, req)
-	if err != nil {
-		helper.WriteError(w, http.StatusNotFound, "category not found")
-		return
+	{
+		if err != nil {
+			helper.WriteError(w, http.StatusNotFound, "category not found")
+			return
+		}
 	}
+
 	helper.WriteJSON(w, http.StatusOK, resp)
 }
 
@@ -181,13 +209,17 @@ func (h *categoryHandler) Update(w http.ResponseWriter, r *http.Request, ps http
 // @Router       /categories/{id} [delete]
 func (h *categoryHandler) Delete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
-	if err != nil || id <= 0 {
-		helper.WriteError(w, http.StatusBadRequest, "invalid id")
-		return
+	{
+		if err != nil || id <= 0 {
+			helper.WriteError(w, http.StatusBadRequest, "invalid id")
+			return
+		}
 	}
+
 	if err := h.service.Delete(r.Context(), id); err != nil {
 		helper.WriteError(w, http.StatusNotFound, err.Error())
 		return
 	}
+
 	helper.WriteJSON(w, http.StatusOK, map[string]string{"message": "deleted"})
 }
