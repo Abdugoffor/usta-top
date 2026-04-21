@@ -72,7 +72,7 @@ func (h *vacancyHandler) Create(w http.ResponseWriter, r *http.Request, _ httpro
 	resp, err := h.service.Create(r.Context(), int64(userID), req)
 	{
 		if err != nil {
-			helper.WriteError(w, http.StatusInternalServerError, err.Error())
+			helper.WriteInternalError(w, err)
 			return
 		}
 	}
@@ -105,8 +105,9 @@ func (h *vacancyHandler) List(w http.ResponseWriter, r *http.Request, _ httprout
 	pq := helper.ParsePage(r)
 
 	f := vacancy_dto.VacancyFilter{
-		Name:  q.Get("name"),
-		Title: q.Get("title"),
+		Name:   q.Get("name"),
+		Title:  q.Get("title"),
+		Search: q.Get("search"),
 	}
 
 	if v := q.Get("user_id"); v != "" {
@@ -154,7 +155,7 @@ func (h *vacancyHandler) List(w http.ResponseWriter, r *http.Request, _ httprout
 	items, total, err := h.service.List(r.Context(), f, pq.Page, pq.Limit, pq.SortCol, pq.SortOrder)
 	{
 		if err != nil {
-			helper.WriteError(w, http.StatusInternalServerError, err.Error())
+			helper.WriteInternalError(w, err)
 			return
 		}
 	}

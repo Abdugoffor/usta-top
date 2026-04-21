@@ -15,7 +15,9 @@ import LoginPage from '@/modules/auth/pages/LoginPage.vue'
 import RegisterPage from '@/modules/auth/pages/RegisterPage.vue'
 import ProfilePage from '@/modules/profile/pages/ProfilePage.vue'
 import ResumeCreatePage from '@/modules/profile/pages/ResumeCreatePage.vue'
+import ResumeEditPage from '@/modules/profile/pages/ResumeEditPage.vue'
 import VacancyCreatePage from '@/modules/profile/pages/VacancyCreatePage.vue'
+import VacancyEditPage from '@/modules/profile/pages/VacancyEditPage.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -32,7 +34,9 @@ const router = createRouter({
         { path: 'register', name: 'register', component: RegisterPage },
         { path: 'profile', name: 'profile', component: ProfilePage },
         { path: 'profile/resumes/create', name: 'resume-create', component: ResumeCreatePage },
+        { path: 'profile/resumes/:id/edit', name: 'resume-edit', component: ResumeEditPage },
         { path: 'profile/vacancies/create', name: 'vacancy-create', component: VacancyCreatePage },
+        { path: 'profile/vacancies/:id/edit', name: 'vacancy-edit', component: VacancyEditPage },
       ],
     },
     {

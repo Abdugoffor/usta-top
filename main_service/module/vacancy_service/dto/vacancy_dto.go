@@ -39,6 +39,7 @@ type VacancyFilter struct {
 	MahallaID  *int64
 	Name       string
 	Title      string
+	Search     string
 	IsActive   *bool
 	MinPrice   *int64
 	MaxPrice   *int64

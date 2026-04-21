@@ -2,8 +2,8 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/modules/auth/store/authStore'
-import { getResumes } from '@/modules/client/api/resumeApi'
-import { getVacancies } from '@/modules/client/api/vacancyApi'
+import { getResumes, deleteResume } from '@/modules/client/api/resumeApi'
+import { getVacancies, deleteVacancy } from '@/modules/client/api/vacancyApi'
 import ClientHeader from '@/modules/client/components/ClientHeader.vue'
 
 const router = useRouter()
@@ -44,6 +44,26 @@ const fetchMyVacancies = async () => {
 const doLogout = () => {
   auth.logout()
   router.push({ name: 'home' })
+}
+
+const doDeleteResume = async (id) => {
+  if (!confirm("Resumeni o'chirishni tasdiqlaysizmi?")) return
+  try {
+    await deleteResume(id)
+    myResumes.value = myResumes.value.filter(r => r.id !== id)
+  } catch {
+    alert("O'chirishda xatolik yuz berdi")
+  }
+}
+
+const doDeleteVacancy = async (id) => {
+  if (!confirm("Vakansiyani o'chirishni tasdiqlaysizmi?")) return
+  try {
+    await deleteVacancy(id)
+    myVacancies.value = myVacancies.value.filter(v => v.id !== id)
+  } catch {
+    alert("O'chirishda xatolik yuz berdi")
+  }
 }
 
 const formatDate = (dt) => {
@@ -142,6 +162,12 @@ onMounted(() => {
                   {{ r.is_active ? 'Faol' : 'Yopiq' }}
                 </span>
                 <RouterLink :to="{ name: 'master-detail', params: { slug: r.slug } }" class="profile-item__view">Ko'rish</RouterLink>
+                <RouterLink :to="{ name: 'resume-edit', params: { id: r.slug } }" class="profile-item__edit">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </RouterLink>
+                <button class="profile-item__del" @click="doDeleteResume(r.id)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                </button>
               </div>
             </div>
           </div>
@@ -193,6 +219,12 @@ onMounted(() => {
                   {{ v.is_active ? 'Faol' : 'Yopiq' }}
                 </span>
                 <RouterLink :to="{ name: 'vacancy-detail', params: { slug: v.slug } }" class="profile-item__view">Ko'rish</RouterLink>
+                <RouterLink :to="{ name: 'vacancy-edit', params: { id: v.slug } }" class="profile-item__edit">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </RouterLink>
+                <button class="profile-item__del" @click="doDeleteVacancy(v.id)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                </button>
               </div>
             </div>
           </div>
@@ -451,6 +483,41 @@ onMounted(() => {
 }
 
 .profile-item__view:hover { background: #eff6ff; }
+
+.profile-item__edit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  color: #6b7280;
+  text-decoration: none;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.profile-item__edit svg { width: 15px; height: 15px; }
+.profile-item__edit:hover { border-color: #2563eb; color: #2563eb; background: #eff6ff; }
+
+.profile-item__del {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  color: #6b7280;
+  background: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.profile-item__del svg { width: 15px; height: 15px; }
+.profile-item__del:hover { border-color: #dc2626; color: #dc2626; background: #fef2f2; }
 
 .profile-empty {
   text-align: center;

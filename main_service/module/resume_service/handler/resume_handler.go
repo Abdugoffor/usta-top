@@ -109,8 +109,18 @@ func (h *resumeHandler) List(w http.ResponseWriter, r *http.Request, _ httproute
 	pq := helper.ParsePage(r)
 
 	f := resume_dto.ResumeFilter{
-		Name:  q.Get("name"),
-		Title: q.Get("title"),
+		Name:   q.Get("name"),
+		Title:  q.Get("title"),
+		Search: q.Get("search"),
+	}
+
+	if catIDs := q.Get("category_ids"); catIDs != "" {
+		for _, s := range strings.Split(catIDs, ",") {
+			s = strings.TrimSpace(s)
+			if n, err := strconv.ParseInt(s, 10, 64); err == nil && n > 0 {
+				f.CategoryIDs = append(f.CategoryIDs, n)
+			}
+		}
 	}
 
 	if v := q.Get("user_id"); v != "" {

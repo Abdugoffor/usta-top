@@ -294,6 +294,11 @@ func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, pag
 		args = append(args, "%"+f.Title+"%")
 		idx++
 	}
+	if f.Search != "" {
+		conditions = append(conditions, fmt.Sprintf("(rs.name ILIKE $%d OR rs.title ILIKE $%d OR rs.skills ILIKE $%d OR rs.text ILIKE $%d)", idx, idx, idx, idx))
+		args = append(args, "%"+f.Search+"%")
+		idx++
+	}
 	if f.IsActive != nil {
 		conditions = append(conditions, fmt.Sprintf("rs.is_active = $%d", idx))
 		args = append(args, *f.IsActive)
@@ -321,6 +326,18 @@ func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, pag
 		)`, idx))
 		args = append(args, *f.CategoryID)
 		idx++
+	}
+	if len(f.CategoryIDs) > 0 {
+		placeholders := make([]string, len(f.CategoryIDs))
+		for i, catID := range f.CategoryIDs {
+			placeholders[i] = fmt.Sprintf("$%d", idx)
+			args = append(args, catID)
+			idx++
+		}
+		conditions = append(conditions, fmt.Sprintf(`EXISTS (
+			SELECT 1 FROM category_resume cr
+			WHERE cr.resume_id = rs.id AND cr.categorya_id IN (%s)
+		)`, strings.Join(placeholders, ",")))
 	}
 
 	col := validSortCols[sortCol]

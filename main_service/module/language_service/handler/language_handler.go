@@ -23,10 +23,10 @@ func NewLanguageHandler(router *httprouter.Router, group string, db *pgxpool.Poo
 
 	routes := group + "/languages"
 	{
-		router.POST(routes, h.Create)
+		router.POST(routes, middleware.CheckRole(h.Create))
 		router.GET(routes, h.List)
 		router.GET(routes+"/:id", h.GetByID)
-		router.PUT(routes+"/:id", h.Update)
+		router.PUT(routes+"/:id", middleware.CheckRole(h.Update))
 		router.DELETE(routes+"/:id", middleware.CheckRole(h.Delete))
 	}
 }

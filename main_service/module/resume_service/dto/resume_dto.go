@@ -40,17 +40,19 @@ type UpdateResumeRequest struct {
 // ─── Filter ──────────────────────────────────────────────────────────────────
 
 type ResumeFilter struct {
-	UserID         *int64
-	RegionID       *int64
-	DistrictID     *int64
-	MahallaID      *int64
-	Name           string
-	Title          string
-	IsActive       *bool
-	MinPrice       *int64
-	MaxPrice       *int64
-	CategoryID     *int64
-	MinExperience  *int
+	UserID        *int64
+	RegionID      *int64
+	DistrictID    *int64
+	MahallaID     *int64
+	Name          string
+	Title         string
+	Search        string
+	IsActive      *bool
+	MinPrice      *int64
+	MaxPrice      *int64
+	CategoryID    *int64
+	CategoryIDs   []int64
+	MinExperience *int
 }
 
 // ─── Response DTOs ───────────────────────────────────────────────────────────

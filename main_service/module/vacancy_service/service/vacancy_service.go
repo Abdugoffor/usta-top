@@ -244,6 +244,11 @@ func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, 
 		args = append(args, "%"+f.Title+"%")
 		idx++
 	}
+	if f.Search != "" {
+		conditions = append(conditions, fmt.Sprintf("(v.name ILIKE $%d OR v.title ILIKE $%d OR v.text ILIKE $%d)", idx, idx, idx))
+		args = append(args, "%"+f.Search+"%")
+		idx++
+	}
 	if f.IsActive != nil {
 		conditions = append(conditions, fmt.Sprintf("v.is_active = $%d", idx))
 		args = append(args, *f.IsActive)
