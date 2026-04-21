@@ -3,6 +3,7 @@ import AdminLayout from '../../shared/layouts/AdminLayout.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import categoryRoutes from '@/modules/category/routes'
 import countryRoutes  from '@/modules/country/routes'
+import languageRoutes from '@/modules/language/routes'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -18,6 +19,7 @@ const router = createRouter({
         },
         ...categoryRoutes,
         ...countryRoutes,
+        ...languageRoutes,
       ]
     }
   ]

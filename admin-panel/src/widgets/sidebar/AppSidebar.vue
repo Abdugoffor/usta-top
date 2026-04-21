@@ -27,6 +27,11 @@ import { Icon } from '@iconify/vue'
         <Icon icon="mdi:earth" />
         <span>Countries</span>
       </RouterLink>
+
+      <RouterLink to="/languages" class="sidebar__link">
+        <Icon icon="mdi:translate" />
+        <span>Languages</span>
+      </RouterLink>
     </nav>
   </aside>
 </template>

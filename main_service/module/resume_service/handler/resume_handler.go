@@ -18,13 +18,6 @@ type resumeHandler struct {
 	service resume_service.ResumeService
 }
 
-var sortCols = map[string]string{
-	"id": "rs.id", "name": "rs.name", "title": "rs.title",
-	"price": "rs.price", "experience_year": "rs.experience_year",
-	"views_count": "rs.views_count",
-	"is_active":   "rs.is_active", "created_at": "rs.created_at", "updated_at": "rs.updated_at",
-}
-
 func NewResumeHandler(router *httprouter.Router, group string, db *pgxpool.Pool) {
 	h := &resumeHandler{service: resume_service.NewResumeService(db)}
 
@@ -113,7 +106,7 @@ func (h *resumeHandler) Create(w http.ResponseWriter, r *http.Request, _ httprou
 // @Router       /resumes [get]
 func (h *resumeHandler) List(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	q := r.URL.Query()
-	pq := helper.ParsePage(r, sortCols, "rs.id")
+	pq := helper.ParsePage(r)
 
 	f := resume_dto.ResumeFilter{
 		Name:  q.Get("name"),

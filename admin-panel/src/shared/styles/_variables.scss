@@ -1,9 +1,9 @@
 :root {
-  --bg-base: #0a0f1e;
-  --bg-surface: #0f172a;
-  --bg-card: rgba(15, 23, 42, 0.95);
-  --bg-elevated: #1e293b;
-  --sidebar-bg: #0d1424;
+  --bg-base: #111827;
+  --bg-surface: #1f2937;
+  --bg-card: #1f2937;
+  --bg-elevated: #374151;
+  --sidebar-bg: #1f2937;
   --sidebar-width: 260px;
 
   --primary: #6366f1;
@@ -15,12 +15,12 @@
   --danger: #ef4444;
   --warning: #f59e0b;
 
-  --text: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --muted: #64748b;
+  --text: #f9fafb;
+  --text-secondary: #9ca3af;
+  --muted: #6b7280;
 
-  --border: rgba(255, 255, 255, 0.08);
-  --border-hover: rgba(255, 255, 255, 0.15);
+  --border: rgba(255, 255, 255, 0.1);
+  --border-hover: rgba(255, 255, 255, 0.18);
 
   --radius-sm: 8px;
   --radius-md: 12px;

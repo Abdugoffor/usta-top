@@ -18,12 +18,6 @@ type vacancyHandler struct {
 	service vacancy_service.VacancyService
 }
 
-var sortCols = map[string]string{
-	"id": "v.id", "name": "v.name", "title": "v.title",
-	"price": "v.price", "views_count": "v.views_count",
-	"is_active": "v.is_active", "created_at": "v.created_at", "updated_at": "v.updated_at",
-}
-
 func NewVacancyHandler(router *httprouter.Router, group string, db *pgxpool.Pool) {
 	h := &vacancyHandler{service: vacancy_service.NewVacancyService(db)}
 
@@ -108,7 +102,7 @@ func (h *vacancyHandler) Create(w http.ResponseWriter, r *http.Request, _ httpro
 // @Router       /vacancies [get]
 func (h *vacancyHandler) List(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	q := r.URL.Query()
-	pq := helper.ParsePage(r, sortCols, "v.id")
+	pq := helper.ParsePage(r)
 
 	f := vacancy_dto.VacancyFilter{
 		Name:  q.Get("name"),

@@ -10,11 +10,12 @@ import { useCategoryStore } from '../store/categoryStore'
 const router = useRouter()
 const categoryStore = useCategoryStore()
 
-const filters = reactive({ name: '', page: 1, sort_by: '', sort_order: 'asc' })
+const filters = reactive({ name: '', is_active: '', page: 1, sort_by: '', sort_order: 'asc' })
 
 const loadData = async () => {
   await categoryStore.fetchCategories({
-    name: filters.name,
+    name: filters.name || undefined,
+    is_active: filters.is_active !== '' ? filters.is_active : undefined,
     page: filters.page,
     sort_by: filters.sort_by || undefined,
     sort_order: filters.sort_by ? filters.sort_order : undefined,
@@ -29,6 +30,8 @@ watch(() => filters.name, () => {
     loadData()
   }, 400)
 })
+
+watch(() => filters.is_active, () => { filters.page = 1; loadData() })
 
 const handleSort = ({ field, order }) => {
   filters.sort_by = field
@@ -77,8 +80,6 @@ const changePage = async (page) => {
   await loadData()
 }
 
-const activeCount   = computed(() => categoryStore.items.filter(i => i.is_active).length)
-const inactiveCount = computed(() => categoryStore.items.length - activeCount.value)
 
 const pageNumbers = computed(() => {
   const total = categoryStore.lastPage
@@ -100,60 +101,33 @@ onMounted(loadData)
     <!-- Header -->
     <div class="cl-header">
       <div class="cl-header__left">
-        <div class="cl-header__icon">
-          <Icon icon="mdi:shape-plus" />
-        </div>
         <div>
           <h2 class="cl-header__title">Kategoriyalar</h2>
           <p class="cl-header__sub">Barcha kategoriyalarni boshqaring</p>
         </div>
       </div>
       <button class="cl-add-btn" @click="goCreate">
-        <Icon icon="mdi:plus" />
-        <span>Yangi kategoriya</span>
+        <span>Добавить</span>
       </button>
-    </div>
-
-    <!-- Stats row -->
-    <div class="cl-stats">
-      <div class="cl-stat">
-        <Icon icon="mdi:layers-triple" class="cl-stat__icon cl-stat__icon--blue" />
-        <div>
-          <span class="cl-stat__val">{{ categoryStore.total }}</span>
-          <span class="cl-stat__label">Jami</span>
-        </div>
-      </div>
-      <div class="cl-stat">
-        <Icon icon="mdi:check-circle" class="cl-stat__icon cl-stat__icon--green" />
-        <div>
-          <span class="cl-stat__val">{{ activeCount }}</span>
-          <span class="cl-stat__label">Faol</span>
-        </div>
-      </div>
-      <div class="cl-stat">
-        <Icon icon="mdi:close-circle" class="cl-stat__icon cl-stat__icon--red" />
-        <div>
-          <span class="cl-stat__val">{{ inactiveCount }}</span>
-          <span class="cl-stat__label">Nofaol</span>
-        </div>
-      </div>
     </div>
 
     <!-- Search card -->
     <BaseCard>
       <div class="cl-search-wrap">
-        <div class="cl-search">
-          <Icon icon="mdi:magnify" class="cl-search__icon" />
-          <input
-            v-model="filters.name"
-            type="text"
-            class="cl-search__input"
-            placeholder="Kategoriya nomini qidirish..."
-            autocomplete="off"
-          />
-          <button v-if="filters.name" class="cl-search__clear" @click="filters.name = ''">
-            <Icon icon="mdi:close-circle" />
-          </button>
+        <div class="cl-filters-row">
+          <div class="cl-search">
+            <Icon icon="mdi:magnify" class="cl-search__icon" />
+            <input v-model="filters.name" type="text" class="cl-search__input"
+              placeholder="Kategoriya nomini qidirish..." autocomplete="off" />
+            <button v-if="filters.name" class="cl-search__clear" @click="filters.name = ''">
+              <Icon icon="mdi:close-circle" />
+            </button>
+          </div>
+          <select v-model="filters.is_active" class="cl-select">
+            <option value="">Barcha holat</option>
+            <option value="true">Faol</option>
+            <option value="false">Nofaol</option>
+          </select>
         </div>
         <div v-if="filters.name" class="cl-search__hint">
           <Icon icon="mdi:information-outline" />
@@ -164,58 +138,34 @@ onMounted(loadData)
 
     <!-- Table card -->
     <BaseCard>
-      <CategoryTable
-        :items="categoryStore.items"
-        :loading="categoryStore.loading"
-        :sort-by="filters.sort_by"
-        :sort-order="filters.sort_order"
-        @edit="goEdit"
-        @delete="deleteItem"
-        @sort="handleSort"
-      />
+      <CategoryTable :items="categoryStore.items" :loading="categoryStore.loading" :sort-by="filters.sort_by"
+        :sort-order="filters.sort_order" @edit="goEdit" @delete="deleteItem" @sort="handleSort" />
 
       <!-- Pagination -->
       <div class="cl-pagination" v-if="categoryStore.lastPage > 1">
         <span class="cl-pagination__info">
-          {{ (categoryStore.currentPage - 1) * categoryStore.perPage + 1 }}–{{ Math.min(categoryStore.currentPage * categoryStore.perPage, categoryStore.total) }} / {{ categoryStore.total }}
+          {{ (categoryStore.currentPage - 1) * categoryStore.perPage + 1 }}–{{ Math.min(categoryStore.currentPage *
+            categoryStore.perPage, categoryStore.total) }} / {{ categoryStore.total }}
         </span>
 
         <div class="cl-pagination__btns">
-          <button
-            class="cl-pagination__btn"
-            :disabled="filters.page <= 1"
-            @click="changePage(filters.page - 1)"
-          >
+          <button class="cl-pagination__btn" :disabled="filters.page <= 1" @click="changePage(filters.page - 1)">
             <Icon icon="mdi:chevron-left" />
           </button>
 
-          <button
-            v-if="categoryStore.currentPage > 3"
-            class="cl-pagination__btn"
-            @click="changePage(1)"
-          >1</button>
+          <button v-if="categoryStore.currentPage > 3" class="cl-pagination__btn" @click="changePage(1)">1</button>
           <span v-if="categoryStore.currentPage > 4" class="cl-pagination__dots">…</span>
 
-          <button
-            v-for="p in pageNumbers"
-            :key="p"
-            class="cl-pagination__btn"
-            :class="{ 'cl-pagination__btn--active': p === categoryStore.currentPage }"
-            @click="changePage(p)"
-          >{{ p }}</button>
+          <button v-for="p in pageNumbers" :key="p" class="cl-pagination__btn"
+            :class="{ 'cl-pagination__btn--active': p === categoryStore.currentPage }" @click="changePage(p)">{{ p
+            }}</button>
 
           <span v-if="categoryStore.currentPage < categoryStore.lastPage - 3" class="cl-pagination__dots">…</span>
-          <button
-            v-if="categoryStore.currentPage < categoryStore.lastPage - 2"
-            class="cl-pagination__btn"
-            @click="changePage(categoryStore.lastPage)"
-          >{{ categoryStore.lastPage }}</button>
+          <button v-if="categoryStore.currentPage < categoryStore.lastPage - 2" class="cl-pagination__btn"
+            @click="changePage(categoryStore.lastPage)">{{ categoryStore.lastPage }}</button>
 
-          <button
-            class="cl-pagination__btn"
-            :disabled="filters.page >= categoryStore.lastPage"
-            @click="changePage(filters.page + 1)"
-          >
+          <button class="cl-pagination__btn" :disabled="filters.page >= categoryStore.lastPage"
+            @click="changePage(filters.page + 1)">
             <Icon icon="mdi:chevron-right" />
           </button>
         </div>
@@ -297,10 +247,6 @@ onMounted(loadData)
   transform: translateY(0);
 }
 
-.cl-add-btn .iconify {
-  font-size: 18px;
-}
-
 /* Stats */
 .cl-stats {
   display: grid;
@@ -329,9 +275,17 @@ onMounted(loadData)
   flex-shrink: 0;
 }
 
-.cl-stat__icon--blue { color: #6366f1; }
-.cl-stat__icon--green { color: #10b981; }
-.cl-stat__icon--red { color: #ef4444; }
+.cl-stat__icon--blue {
+  color: #6366f1;
+}
+
+.cl-stat__icon--green {
+  color: #10b981;
+}
+
+.cl-stat__icon--red {
+  color: #ef4444;
+}
 
 .cl-stat__val {
   display: block;
@@ -353,6 +307,34 @@ onMounted(loadData)
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.cl-filters-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cl-select {
+  padding: 12px 16px;
+  background: var(--bg-elevated);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  min-width: 150px;
+}
+
+.cl-select:focus {
+  border-color: #6366f1;
+}
+
+.cl-select option {
+  background: var(--bg-elevated);
 }
 
 .cl-search {
@@ -393,7 +375,7 @@ onMounted(loadData)
   background: rgba(30, 41, 59, 0.9);
 }
 
-.cl-search__input:focus ~ .cl-search__icon,
+.cl-search__input:focus~.cl-search__icon,
 .cl-search:focus-within .cl-search__icon {
   color: #6366f1;
 }
@@ -428,8 +410,15 @@ onMounted(loadData)
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Pagination */

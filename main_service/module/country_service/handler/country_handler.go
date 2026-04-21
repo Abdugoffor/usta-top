@@ -18,11 +18,6 @@ type countryHandler struct {
 	service country_service.CountryService
 }
 
-var sortCols = map[string]string{
-	"id": "c.id", "parent_id": "c.parent_id", "name": "c.name",
-	"is_active": "c.is_active", "created_at": "c.created_at", "updated_at": "c.updated_at",
-}
-
 func NewCountryHandler(router *httprouter.Router, group string, db *pgxpool.Pool) {
 	h := &countryHandler{service: country_service.NewCountryService(db)}
 
@@ -92,7 +87,7 @@ func (h *countryHandler) Create(w http.ResponseWriter, r *http.Request, _ httpro
 // @Router       /countries [get]
 func (h *countryHandler) List(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	q := r.URL.Query()
-	pq := helper.ParsePage(r, sortCols, "c.id")
+	pq := helper.ParsePage(r)
 
 	f := country_dto.CountryFilter{
 		Name: q.Get("name"),

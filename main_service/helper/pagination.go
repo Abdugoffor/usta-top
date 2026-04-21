@@ -23,7 +23,7 @@ type PageMeta struct {
 	TotalPages int64 `json:"total_pages"`
 }
 
-func ParsePage(r *http.Request, validCols map[string]string, defaultCol string) PageQuery {
+func ParsePage(r *http.Request) PageQuery {
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	{
 		if page < 1 {
@@ -38,13 +38,6 @@ func ParsePage(r *http.Request, validCols map[string]string, defaultCol string) 
 		}
 	}
 
-	col, ok := validCols[r.URL.Query().Get("sort_by")]
-	{
-		if !ok {
-			col = defaultCol
-		}
-	}
-
 	sortOrder := strings.ToUpper(r.URL.Query().Get("sort_order"))
 	{
 		if sortOrder != "DESC" {
@@ -52,7 +45,7 @@ func ParsePage(r *http.Request, validCols map[string]string, defaultCol string) 
 		}
 	}
 
-	return PageQuery{Page: page, Limit: limit, SortCol: col, SortOrder: sortOrder}
+	return PageQuery{Page: page, Limit: limit, SortCol: r.URL.Query().Get("sort_by"), SortOrder: sortOrder}
 }
 
 func NewPageMeta(total int64, page, limit int) PageMeta {

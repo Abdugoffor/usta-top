@@ -17,7 +17,7 @@ type CommentService interface {
 	GetByID(ctx context.Context, id int64) (*comment_dto.CommentResponse, error)
 	Update(ctx context.Context, id, userID int64, req comment_dto.UpdateCommentRequest) (*comment_dto.CommentResponse, error)
 	Delete(ctx context.Context, id, userID int64) error
-	List(ctx context.Context, f comment_dto.CommentFilter, page, limit int) ([]*comment_dto.CommentResponse, int64, error)
+	List(ctx context.Context, f comment_dto.CommentFilter, page, limit int, sortCol, sortOrder string) ([]*comment_dto.CommentResponse, int64, error)
 }
 
 // ─── Implementation ──────────────────────────────────────────────────────────
@@ -108,9 +108,16 @@ func (s *commentService) Delete(ctx context.Context, id, userID int64) error {
 	return nil
 }
 
+var validSortCols = map[string]string{
+	"id":         "c.id",
+	"type":       "c.type",
+	"created_at": "c.created_at",
+	"updated_at": "c.updated_at",
+}
+
 // ─── List (threaded) ─────────────────────────────────────────────────────────
 
-func (s *commentService) List(ctx context.Context, f comment_dto.CommentFilter, page, limit int) ([]*comment_dto.CommentResponse, int64, error) {
+func (s *commentService) List(ctx context.Context, f comment_dto.CommentFilter, page, limit int, sortCol, sortOrder string) ([]*comment_dto.CommentResponse, int64, error) {
 	args := []interface{}{}
 	conditions := []string{"c.deleted_at IS NULL", "c.parent_id IS NULL"}
 	idx := 1
@@ -143,10 +150,18 @@ func (s *commentService) List(ctx context.Context, f comment_dto.CommentFilter, 
 		return nil, 0, err
 	}
 
+	col := validSortCols[sortCol]
+	if col == "" {
+		col = "c.id"
+	}
+	if sortOrder != "DESC" {
+		sortOrder = "ASC"
+	}
+
 	rootArgs := append(args, limit, (page-1)*limit)
 	rootRows, err := s.db.Query(ctx, fmt.Sprintf(
-		"SELECT c.id FROM comments c WHERE %s ORDER BY c.id ASC LIMIT $%d OFFSET $%d",
-		where, idx, idx+1,
+		"SELECT c.id FROM comments c WHERE %s ORDER BY %s %s LIMIT $%d OFFSET $%d",
+		where, col, sortOrder, idx, idx+1,
 	), rootArgs...)
 	if err != nil {
 		return nil, 0, err

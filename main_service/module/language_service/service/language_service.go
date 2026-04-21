@@ -1,9 +1,9 @@
-package categorya_service
+package language_service
 
 import (
 	"context"
 	"fmt"
-	categorya_dto "main_service/module/categorya_service/dto"
+	language_dto "main_service/module/language_service/dto"
 	"strings"
 	"time"
 
@@ -12,68 +12,73 @@ import (
 
 // ─── Interface ───────────────────────────────────────────────────────────────
 
-type CategoryService interface {
-	Create(ctx context.Context, req categorya_dto.CreateCategoryRequest) (*categorya_dto.CategoryResponse, error)
-	GetByID(ctx context.Context, id int64) (*categorya_dto.CategoryResponse, error)
-	Update(ctx context.Context, id int64, req categorya_dto.UpdateCategoryRequest) (*categorya_dto.CategoryResponse, error)
+type LanguageService interface {
+	Create(ctx context.Context, req language_dto.CreateLanguageRequest) (*language_dto.LanguageResponse, error)
+	GetByID(ctx context.Context, id int64) (*language_dto.LanguageResponse, error)
+	Update(ctx context.Context, id int64, req language_dto.UpdateLanguageRequest) (*language_dto.LanguageResponse, error)
 	Delete(ctx context.Context, id int64) error
-	List(ctx context.Context, f categorya_dto.CategoryFilter, page, limit int, sortCol, sortOrder string) ([]*categorya_dto.CategoryResponse, int64, error)
+	List(ctx context.Context, f language_dto.LanguageFilter, page, limit int, sortCol, sortOrder string) ([]*language_dto.LanguageResponse, int64, error)
 }
 
 // ─── Implementation ──────────────────────────────────────────────────────────
 
-type categoryService struct {
+type languageService struct {
 	db *pgxpool.Pool
 }
 
-func NewCategoryService(db *pgxpool.Pool) CategoryService {
-	return &categoryService{db: db}
+func NewLanguageService(db *pgxpool.Pool) LanguageService {
+	return &languageService{db: db}
 }
 
 var validSortCols = map[string]string{
-	"id":         "c.id",
-	"name":       "c.name",
-	"is_active":  "c.is_active",
-	"created_at": "c.created_at",
-	"updated_at": "c.updated_at",
+	"id":         "l.id",
+	"name":       "l.name",
+	"is_active":  "l.is_active",
+	"created_at": "l.created_at",
+	"updated_at": "l.updated_at",
 }
 
 // ─── Create ──────────────────────────────────────────────────────────────────
 
-func (s *categoryService) Create(ctx context.Context, req categorya_dto.CreateCategoryRequest) (*categorya_dto.CategoryResponse, error) {
+func (s *languageService) Create(ctx context.Context, req language_dto.CreateLanguageRequest) (*language_dto.LanguageResponse, error) {
 	isActive := true
-	{
-		if req.IsActive != nil {
-			isActive = *req.IsActive
-		}
+
+	if req.IsActive != nil {
+		isActive = *req.IsActive
 	}
 
-	var r categorya_dto.CategoryResponse
+	var id int64
 	err := s.db.QueryRow(ctx, `
-		INSERT INTO categories (name, is_active)
-		VALUES ($1, $2)
-		RETURNING id, name, is_active, created_at, updated_at, deleted_at
-	`, req.Name, isActive).Scan(
-		&r.ID, &r.Name, &r.IsActive, &r.CreatedAt, &r.UpdatedAt, &r.DeletedAt,
-	)
-	return &r, err
+		INSERT INTO languages (name, description, is_active)
+		VALUES ($1, $2, $3)
+		RETURNING id
+	`, req.Name, req.Description, isActive).Scan(&id)
+	if err != nil {
+		return nil, err
+	}
+	return s.GetByID(ctx, id)
 }
 
 // ─── GetByID ─────────────────────────────────────────────────────────────────
 
-func (s *categoryService) GetByID(ctx context.Context, id int64) (*categorya_dto.CategoryResponse, error) {
-	var r categorya_dto.CategoryResponse
+func (s *languageService) GetByID(ctx context.Context, id int64) (*language_dto.LanguageResponse, error) {
+	var r language_dto.LanguageResponse
+
 	err := s.db.QueryRow(ctx, `
-		SELECT id, name, is_active, created_at, updated_at, deleted_at
-		FROM categories
-		WHERE id = $1 AND deleted_at IS NULL
-	`, id).Scan(&r.ID, &r.Name, &r.IsActive, &r.CreatedAt, &r.UpdatedAt, &r.DeletedAt)
+		SELECT l.id, l.name, COALESCE(l.description, ''),
+		       l.is_active, l.created_at, l.updated_at, l.deleted_at
+		FROM languages l
+		WHERE l.id = $1 AND l.deleted_at IS NULL
+	`, id).Scan(
+		&r.ID, &r.Name, &r.Description,
+		&r.IsActive, &r.CreatedAt, &r.UpdatedAt, &r.DeletedAt,
+	)
 	return &r, err
 }
 
 // ─── Update ──────────────────────────────────────────────────────────────────
 
-func (s *categoryService) Update(ctx context.Context, id int64, req categorya_dto.UpdateCategoryRequest) (*categorya_dto.CategoryResponse, error) {
+func (s *languageService) Update(ctx context.Context, id int64, req language_dto.UpdateLanguageRequest) (*language_dto.LanguageResponse, error) {
 	setClauses := []string{"updated_at = NOW()"}
 	args := []interface{}{}
 	idx := 1
@@ -83,6 +88,13 @@ func (s *categoryService) Update(ctx context.Context, id int64, req categorya_dt
 		args = append(args, *req.Name)
 		idx++
 	}
+
+	if req.Description != nil {
+		setClauses = append(setClauses, fmt.Sprintf("description = $%d", idx))
+		args = append(args, *req.Description)
+		idx++
+	}
+
 	if req.IsActive != nil {
 		setClauses = append(setClauses, fmt.Sprintf("is_active = $%d", idx))
 		args = append(args, *req.IsActive)
@@ -91,58 +103,62 @@ func (s *categoryService) Update(ctx context.Context, id int64, req categorya_dt
 
 	args = append(args, id)
 	query := fmt.Sprintf(`
-		UPDATE categories SET %s
+		UPDATE languages SET %s
 		WHERE id = $%d AND deleted_at IS NULL
-		RETURNING id, name, is_active, created_at, updated_at, deleted_at
+		RETURNING id
 	`, strings.Join(setClauses, ", "), idx)
 
-	var r categorya_dto.CategoryResponse
-	err := s.db.QueryRow(ctx, query, args...).Scan(
-		&r.ID, &r.Name, &r.IsActive, &r.CreatedAt, &r.UpdatedAt, &r.DeletedAt,
-	)
-	return &r, err
+	var retID int64
+
+	if err := s.db.QueryRow(ctx, query, args...).Scan(&retID); err != nil {
+		return nil, err
+	}
+
+	return s.GetByID(ctx, retID)
 }
 
 // ─── Delete ──────────────────────────────────────────────────────────────────
 
-func (s *categoryService) Delete(ctx context.Context, id int64) error {
+func (s *languageService) Delete(ctx context.Context, id int64) error {
 	tag, err := s.db.Exec(ctx, `
-		UPDATE categories SET deleted_at = $1 WHERE id = $2 AND deleted_at IS NULL
+		UPDATE languages SET deleted_at = $1 WHERE id = $2 AND deleted_at IS NULL
 	`, time.Now(), id)
+
 	if err != nil {
 		return err
 	}
+
 	if tag.RowsAffected() == 0 {
-		return fmt.Errorf("category not found")
+		return fmt.Errorf("language not found")
 	}
+
 	return nil
 }
 
 // ─── List ────────────────────────────────────────────────────────────────────
 
-func (s *categoryService) List(ctx context.Context, f categorya_dto.CategoryFilter, page, limit int, sortCol, sortOrder string) ([]*categorya_dto.CategoryResponse, int64, error) {
+func (s *languageService) List(ctx context.Context, f language_dto.LanguageFilter, page, limit int, sortCol, sortOrder string) ([]*language_dto.LanguageResponse, int64, error) {
 	args := []interface{}{}
-
-	conditions := []string{"c.deleted_at IS NULL"}
-
+	conditions := []string{"l.deleted_at IS NULL"}
 	idx := 1
 
 	if f.Name != "" {
-		conditions = append(conditions, fmt.Sprintf("c.name ILIKE $%d", idx))
+		conditions = append(conditions, fmt.Sprintf("l.name ILIKE $%d", idx))
 		args = append(args, "%"+f.Name+"%")
 		idx++
 	}
 
 	if f.IsActive != nil {
-		conditions = append(conditions, fmt.Sprintf("c.is_active = $%d", idx))
+		conditions = append(conditions, fmt.Sprintf("l.is_active = $%d", idx))
 		args = append(args, *f.IsActive)
 		idx++
 	}
 
 	col := validSortCols[sortCol]
-
-	if col == "" {
-		col = "c.id"
+	{
+		if col == "" {
+			col = "l.id"
+		}
 	}
 
 	if sortOrder != "DESC" {
@@ -152,9 +168,10 @@ func (s *categoryService) List(ctx context.Context, f categorya_dto.CategoryFilt
 	args = append(args, limit, (page-1)*limit)
 
 	query := fmt.Sprintf(`
-		SELECT c.id, c.name, c.is_active, c.created_at, c.updated_at, c.deleted_at,
+		SELECT l.id, l.name, COALESCE(l.description, ''),
+		       l.is_active, l.created_at, l.updated_at, l.deleted_at,
 		       COUNT(*) OVER() AS total
-		FROM categories c
+		FROM languages l
 		WHERE %s
 		ORDER BY %s %s
 		LIMIT $%d OFFSET $%d
@@ -171,11 +188,15 @@ func (s *categoryService) List(ctx context.Context, f categorya_dto.CategoryFilt
 
 	var total int64
 
-	var items []*categorya_dto.CategoryResponse
+	var items []*language_dto.LanguageResponse
 	{
 		for rows.Next() {
-			var r categorya_dto.CategoryResponse
-			if err := rows.Scan(&r.ID, &r.Name, &r.IsActive, &r.CreatedAt, &r.UpdatedAt, &r.DeletedAt, &total); err != nil {
+			var r language_dto.LanguageResponse
+			if err := rows.Scan(
+				&r.ID, &r.Name, &r.Description,
+				&r.IsActive, &r.CreatedAt, &r.UpdatedAt, &r.DeletedAt,
+				&total,
+			); err != nil {
 				return nil, 0, err
 			}
 			items = append(items, &r)

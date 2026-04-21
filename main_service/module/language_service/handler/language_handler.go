@@ -1,11 +1,11 @@
-package categorya_handler
+package language_handler
 
 import (
 	"encoding/json"
 	"main_service/helper"
 	"main_service/middleware"
-	categorya_dto "main_service/module/categorya_service/dto"
-	categorya_service "main_service/module/categorya_service/service"
+	language_dto "main_service/module/language_service/dto"
+	language_service "main_service/module/language_service/service"
 	"net/http"
 	"strconv"
 	"strings"
@@ -14,14 +14,14 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-type categoryHandler struct {
-	service categorya_service.CategoryService
+type languageHandler struct {
+	service language_service.LanguageService
 }
 
-func NewCategoryHandler(router *httprouter.Router, group string, db *pgxpool.Pool) {
-	h := &categoryHandler{service: categorya_service.NewCategoryService(db)}
+func NewLanguageHandler(router *httprouter.Router, group string, db *pgxpool.Pool) {
+	h := &languageHandler{service: language_service.NewLanguageService(db)}
 
-	routes := group + "/categories"
+	routes := group + "/languages"
 	{
 		router.POST(routes, h.Create)
 		router.GET(routes, h.List)
@@ -32,19 +32,19 @@ func NewCategoryHandler(router *httprouter.Router, group string, db *pgxpool.Poo
 }
 
 // Create godoc
-// @Summary      Yangi kategoriya yaratish
-// @Tags         Categories
+// @Summary      Yangi til yaratish
+// @Tags         Languages
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Param        body  body      categorya_dto.CreateCategoryRequest  true  "Kategoriya ma'lumotlari"
-// @Success      201   {object}  categorya_dto.CategoryResponse
+// @Param        body  body      language_dto.CreateLanguageRequest  true  "Til ma'lumotlari"
+// @Success      201   {object}  language_dto.LanguageResponse
 // @Failure      400   {object}  map[string]string
 // @Failure      401   {object}  map[string]string
 // @Failure      500   {object}  map[string]string
-// @Router       /categories [post]
-func (h *categoryHandler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	var req categorya_dto.CreateCategoryRequest
+// @Router       /languages [post]
+func (h *languageHandler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var req language_dto.CreateLanguageRequest
 	{
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			helper.WriteError(w, http.StatusBadRequest, "invalid JSON")
@@ -72,24 +72,25 @@ func (h *categoryHandler) Create(w http.ResponseWriter, r *http.Request, _ httpr
 }
 
 // List godoc
-// @Summary      Kategoriyalar ro'yxati
-// @Tags         Categories
+// @Summary      Tillar ro'yxati
+// @Tags         Languages
 // @Produce      json
 // @Param        name        query     string  false  "Nomi bo'yicha filter"
 // @Param        is_active   query     boolean false  "Faol/faolsiz"
 // @Param        page        query     integer false  "Sahifa" default(1)
 // @Param        limit       query     integer false  "Limit" default(10)
-// @Param        sort_by     query     string  false  "Saralash maydoni"
+// @Param        sort_by     query     string  false  "Saralash maydoni (id, name, is_active, created_at, updated_at)"
 // @Param        sort_order  query     string  false  "asc yoki desc"
 // @Success      200  {object}  map[string]interface{}
 // @Failure      500  {object}  map[string]string
-// @Router       /categories [get]
-func (h *categoryHandler) List(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+// @Router       /languages [get]
+func (h *languageHandler) List(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	q := r.URL.Query()
-
 	pq := helper.ParsePage(r)
 
-	f := categorya_dto.CategoryFilter{Name: q.Get("name")}
+	f := language_dto.LanguageFilter{
+		Name: q.Get("name"),
+	}
 
 	if v := q.Get("is_active"); v != "" {
 		if b, err := strconv.ParseBool(v); err == nil {
@@ -105,22 +106,22 @@ func (h *categoryHandler) List(w http.ResponseWriter, r *http.Request, _ httprou
 		}
 	}
 
-	helper.WriteJSON(w, http.StatusOK, map[string]interface{}{
+	helper.WriteJSON(w, http.StatusOK, map[string]any{
 		"data": items,
 		"meta": helper.NewPageMeta(total, pq.Page, pq.Limit),
 	})
 }
 
 // GetByID godoc
-// @Summary      Kategoriyani ID bo'yicha olish
-// @Tags         Categories
+// @Summary      Tilni ID bo'yicha olish
+// @Tags         Languages
 // @Produce      json
-// @Param        id   path      integer  true  "Kategoriya ID"
-// @Success      200  {object}  categorya_dto.CategoryResponse
+// @Param        id   path      integer  true  "Til ID"
+// @Success      200  {object}  language_dto.LanguageResponse
 // @Failure      400  {object}  map[string]string
 // @Failure      404  {object}  map[string]string
-// @Router       /categories/{id} [get]
-func (h *categoryHandler) GetByID(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+// @Router       /languages/{id} [get]
+func (h *languageHandler) GetByID(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
 	{
 		if err != nil || id <= 0 {
@@ -132,7 +133,7 @@ func (h *categoryHandler) GetByID(w http.ResponseWriter, r *http.Request, ps htt
 	resp, err := h.service.GetByID(r.Context(), id)
 	{
 		if err != nil {
-			helper.WriteError(w, http.StatusNotFound, "category not found")
+			helper.WriteError(w, http.StatusNotFound, "language not found")
 			return
 		}
 	}
@@ -141,19 +142,19 @@ func (h *categoryHandler) GetByID(w http.ResponseWriter, r *http.Request, ps htt
 }
 
 // Update godoc
-// @Summary      Kategoriyani yangilash
-// @Tags         Categories
+// @Summary      Tilni yangilash
+// @Tags         Languages
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Param        id    path      integer                              true  "Kategoriya ID"
-// @Param        body  body      categorya_dto.UpdateCategoryRequest  true  "Yangi ma'lumotlar"
-// @Success      200   {object}  categorya_dto.CategoryResponse
+// @Param        id    path      integer                             true  "Til ID"
+// @Param        body  body      language_dto.UpdateLanguageRequest  true  "Yangi ma'lumotlar"
+// @Success      200   {object}  language_dto.LanguageResponse
 // @Failure      400   {object}  map[string]string
 // @Failure      401   {object}  map[string]string
 // @Failure      404   {object}  map[string]string
-// @Router       /categories/{id} [put]
-func (h *categoryHandler) Update(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+// @Router       /languages/{id} [put]
+func (h *languageHandler) Update(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
 	{
 		if err != nil || id <= 0 {
@@ -162,7 +163,7 @@ func (h *categoryHandler) Update(w http.ResponseWriter, r *http.Request, ps http
 		}
 	}
 
-	var req categorya_dto.UpdateCategoryRequest
+	var req language_dto.UpdateLanguageRequest
 	{
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			helper.WriteError(w, http.StatusBadRequest, "invalid JSON")
@@ -183,7 +184,7 @@ func (h *categoryHandler) Update(w http.ResponseWriter, r *http.Request, ps http
 	resp, err := h.service.Update(r.Context(), id, req)
 	{
 		if err != nil {
-			helper.WriteError(w, http.StatusNotFound, "category not found")
+			helper.WriteError(w, http.StatusNotFound, "language not found")
 			return
 		}
 	}
@@ -192,17 +193,17 @@ func (h *categoryHandler) Update(w http.ResponseWriter, r *http.Request, ps http
 }
 
 // Delete godoc
-// @Summary      Kategoriyani o'chirish
-// @Tags         Categories
+// @Summary      Tilni o'chirish
+// @Tags         Languages
 // @Produce      json
 // @Security     BearerAuth
-// @Param        id   path      integer  true  "Kategoriya ID"
+// @Param        id   path      integer  true  "Til ID"
 // @Success      200  {object}  map[string]string
 // @Failure      400  {object}  map[string]string
 // @Failure      401  {object}  map[string]string
 // @Failure      404  {object}  map[string]string
-// @Router       /categories/{id} [delete]
-func (h *categoryHandler) Delete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+// @Router       /languages/{id} [delete]
+func (h *languageHandler) Delete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
 	{
 		if err != nil || id <= 0 {

@@ -89,23 +89,17 @@ func (h *commentHandler) Create(w http.ResponseWriter, r *http.Request, _ httpro
 // @Param        type          query     string  false  "comment yoki review"
 // @Param        page          query     integer false  "Sahifa" default(1)
 // @Param        limit         query     integer false  "Limit" default(20)
+// @Param        sort_by       query     string  false  "Saralash maydoni (id, type, created_at, updated_at)"
+// @Param        sort_order    query     string  false  "asc yoki desc"
 // @Success      200  {object}  map[string]interface{}
 // @Failure      500  {object}  map[string]string
 // @Router       /comments [get]
 func (h *commentHandler) List(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	q := r.URL.Query()
-
-	page, _ := strconv.Atoi(q.Get("page"))
+	pq := helper.ParsePage(r)
 	{
-		if page < 1 {
-			page = 1
-		}
-	}
-
-	limit, _ := strconv.Atoi(q.Get("limit"))
-	{
-		if limit < 1 || limit > 100 {
-			limit = 20
+		if pq.Limit < 1 || pq.Limit > 100 {
+			pq.Limit = 20
 		}
 	}
 
@@ -130,7 +124,7 @@ func (h *commentHandler) List(w http.ResponseWriter, r *http.Request, _ httprout
 		}
 	}
 
-	items, total, err := h.service.List(r.Context(), f, page, limit)
+	items, total, err := h.service.List(r.Context(), f, pq.Page, pq.Limit, pq.SortCol, pq.SortOrder)
 	{
 		if err != nil {
 			helper.WriteError(w, http.StatusInternalServerError, err.Error())
@@ -140,7 +134,7 @@ func (h *commentHandler) List(w http.ResponseWriter, r *http.Request, _ httprout
 
 	helper.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"data": items,
-		"meta": helper.NewPageMeta(total, page, limit),
+		"meta": helper.NewPageMeta(total, pq.Page, pq.Limit),
 	})
 }
 
