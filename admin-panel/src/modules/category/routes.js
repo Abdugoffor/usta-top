@@ -4,17 +4,17 @@ import CategoryEditPage from './pages/CategoryEditPage.vue'
 
 export default [
   {
-    path: '/categories',
+    path: 'categories',
     name: 'category-list',
     component: CategoryListPage
   },
   {
-    path: '/categories/create',
+    path: 'categories/create',
     name: 'category-create',
     component: CategoryCreatePage
   },
   {
-    path: '/categories/:id/edit',
+    path: 'categories/:id/edit',
     name: 'category-edit',
     component: CategoryEditPage
   }

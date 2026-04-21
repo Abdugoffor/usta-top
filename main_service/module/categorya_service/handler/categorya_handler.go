@@ -3,7 +3,6 @@ package categorya_handler
 import (
 	"encoding/json"
 	"main_service/helper"
-	"main_service/middleware"
 	categorya_dto "main_service/module/categorya_service/dto"
 	categorya_service "main_service/module/categorya_service/service"
 	"net/http"
@@ -27,7 +26,7 @@ func NewCategoryHandler(router *httprouter.Router, group string, db *pgxpool.Poo
 		router.GET(routes, h.List)
 		router.GET(routes+"/:id", h.GetByID)
 		router.PUT(routes+"/:id", h.Update)
-		router.DELETE(routes+"/:id", middleware.CheckRole(h.Delete))
+		router.DELETE(routes+"/:id", h.Delete)
 	}
 }
 
