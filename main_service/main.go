@@ -30,7 +30,6 @@ import (
 	comment_cmd "main_service/module/comment_service"
 	country_cmd "main_service/module/country_service"
 	language_cmd "main_service/module/language_service"
-	region_cmd "main_service/module/region_service"
 	resume_cmd "main_service/module/resume_service"
 	user_cmd "main_service/module/user_service"
 	vacancy_cmd "main_service/module/vacancy_service"
@@ -62,7 +61,6 @@ func main() {
 	router := httprouter.New()
 	{
 		user_cmd.Cmd(router, db)
-		region_cmd.Cmd(router, db)
 		country_cmd.Cmd(router, db)
 		language_cmd.Cmd(router, db)
 		categorya_cmd.Cmd(router, db)
