@@ -18,19 +18,33 @@ import { Icon } from '@iconify/vue'
         <span>Dashboard</span>
       </RouterLink>
 
+      <div class="sidebar__section-label">Katalog</div>
+
       <RouterLink to="/admin/categories" class="sidebar__link">
         <Icon icon="mdi:shape-outline" />
-        <span>Categories</span>
+        <span>Kategoriyalar</span>
       </RouterLink>
 
       <RouterLink to="/admin/countries" class="sidebar__link">
         <Icon icon="mdi:earth" />
-        <span>Countries</span>
+        <span>Hududlar</span>
       </RouterLink>
 
       <RouterLink to="/admin/languages" class="sidebar__link">
         <Icon icon="mdi:translate" />
-        <span>Languages</span>
+        <span>Tillar</span>
+      </RouterLink>
+
+      <div class="sidebar__section-label">Foydalanuvchilar</div>
+
+      <RouterLink to="/admin/resumes" class="sidebar__link">
+        <Icon icon="mdi:account-box-outline" />
+        <span>Resumelar</span>
+      </RouterLink>
+
+      <RouterLink to="/admin/vacancies-admin" class="sidebar__link">
+        <Icon icon="mdi:briefcase-outline" />
+        <span>Vakansiyalar</span>
       </RouterLink>
 
       <div class="sidebar__divider"></div>
@@ -44,6 +58,16 @@ import { Icon } from '@iconify/vue'
 </template>
 
 <style scoped>
+.sidebar__section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  padding: 12px 16px 4px;
+  opacity: 0.6;
+}
+
 .sidebar__divider {
   height: 1px;
   background: var(--border);

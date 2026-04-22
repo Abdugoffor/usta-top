@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go build *)",
+      "Read(//c/golang/httptrouter/usta_top/admin-panel/src/**)"
+    ]
+  }
+}

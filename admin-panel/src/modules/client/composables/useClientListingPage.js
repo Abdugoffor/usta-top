@@ -1,4 +1,4 @@
-import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 
 export function useClientListingPage({
   route,
@@ -23,26 +23,12 @@ export function useClientListingPage({
   const secondaryTotal = ref(0)
   const sortBy = ref(defaultSort)
   const mobileFilterOpen = ref(false)
-  const sentinel = ref(null)
   const requestVersion = ref(0)
   const filters = reactive(createFilters())
   const activeFilterCount = computed(() => countActiveFilters(filters))
+  const remaining = computed(() => Math.max(0, total.value - items.value.length))
 
-  let observer = null
   let searchTimer = null
-
-  const ensureLoadMoreIfNeeded = async () => {
-    await nextTick()
-
-    if (!sentinel.value || loading.value || loadingMore.value || !hasMore.value || !nextCursor.value) {
-      return
-    }
-
-    const rect = sentinel.value.getBoundingClientRect()
-    if (rect.top <= window.innerHeight + 300) {
-      loadMore()
-    }
-  }
 
   const fetchItems = async () => {
     const version = ++requestVersion.value
@@ -67,7 +53,6 @@ export function useClientListingPage({
     } finally {
       if (version !== requestVersion.value) return
       loading.value = false
-      ensureLoadMoreIfNeeded()
     }
   }
 
@@ -93,7 +78,6 @@ export function useClientListingPage({
     } finally {
       if (version !== requestVersion.value) return
       loadingMore.value = false
-      ensureLoadMoreIfNeeded()
     }
   }
 
@@ -151,23 +135,10 @@ export function useClientListingPage({
     loadFromUrl({ query: route.query, filters, search, sortBy })
     clearTimeout(searchTimer)
     await Promise.all([fetchItems(), fetchSecondaryTotal()])
-
-    observer = new IntersectionObserver((entries) => {
-      if (entries[0]?.isIntersecting) {
-        loadMore()
-      }
-    }, { rootMargin: '300px' })
-
-    if (sentinel.value) {
-      observer.observe(sentinel.value)
-    }
   })
 
   onUnmounted(() => {
     clearTimeout(searchTimer)
-    if (observer) {
-      observer.disconnect()
-    }
   })
 
   return {
@@ -177,12 +148,13 @@ export function useClientListingPage({
     hasMore,
     items,
     loading,
+    loadMore,
     loadingMore,
     mobileFilterOpen,
     onSortChange,
+    remaining,
     search,
     secondaryTotal,
-    sentinel,
     sortBy,
     total,
   }

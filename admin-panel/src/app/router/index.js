@@ -5,6 +5,8 @@ import DashboardView from '@/views/DashboardView.vue'
 import categoryRoutes from '@/modules/category/routes'
 import countryRoutes from '@/modules/country/routes'
 import languageRoutes from '@/modules/language/routes'
+import resumeAdminRoutes from '@/modules/resume/routes'
+import vacancyAdminRoutes from '@/modules/vacancy/routes'
 
 import HomePage from '@/modules/client/pages/HomePage.vue'
 import VacanciesPage from '@/modules/client/pages/VacanciesPage.vue'
@@ -47,6 +49,8 @@ const router = createRouter({
         ...categoryRoutes,
         ...countryRoutes,
         ...languageRoutes,
+        ...resumeAdminRoutes,
+        ...vacancyAdminRoutes,
       ],
     },
   ],

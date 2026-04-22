@@ -50,7 +50,7 @@ func SeedVacanciesAndResumes() {
 	// ==========================
 	// RESUMES
 	// ==========================
-	for i := 1; i <= 500000; i++ {
+	for i := 1; i <= 1000000; i++ {
 		firstName := firstNames[rand.Intn(len(firstNames))]
 		lastName := lastNames[rand.Intn(len(lastNames))]
 		fullName := firstName + " " + lastName

@@ -31,6 +31,7 @@ import (
 	country_cmd "main_service/module/country_service"
 	language_cmd "main_service/module/language_service"
 	resume_cmd "main_service/module/resume_service"
+	translations_cmd "main_service/module/translations_service"
 	upload_cmd "main_service/module/upload_service"
 	user_cmd "main_service/module/user_service"
 	vacancy_cmd "main_service/module/vacancy_service"
@@ -64,6 +65,7 @@ func main() {
 		user_cmd.Cmd(router, db)
 		country_cmd.Cmd(router, db)
 		language_cmd.Cmd(router, db)
+		translations_cmd.Cmd(router, db)
 		categorya_cmd.Cmd(router, db)
 		vacancy_cmd.Cmd(router, db)
 		resume_cmd.Cmd(router, db)
@@ -89,8 +91,8 @@ func main() {
 	)
 
 	log.Printf("🚀 Server started on :%s", port)
-	log.Printf("📖 Swagger UI: http://localhost:%s/swagger/index.html", port)
-	log.Fatal(http.ListenAndServe(":"+port, handler))
-	// log.Printf("📖 Swagger UI: http://172.20.10.13:%s/swagger/index.html", port)
-	// log.Fatal(http.ListenAndServe("0.0.0.0:"+port, middleware.CORS(router)))
+	// log.Printf("📖 Swagger UI: http://localhost:%s/swagger/index.html", port)
+	// log.Fatal(http.ListenAndServe(":"+port, handler))
+	log.Printf("📖 Swagger UI: http://172.20.10.13:%s/swagger/index.html", port)
+	log.Fatal(http.ListenAndServe("0.0.0.0:"+port, handler))
 }

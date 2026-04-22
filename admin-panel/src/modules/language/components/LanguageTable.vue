@@ -9,7 +9,7 @@ const props = defineProps({
   sortOrder: { type: String,  default: 'asc' },
 })
 
-const emit = defineEmits(['edit', 'delete', 'sort'])
+const emit = defineEmits(['show', 'edit', 'delete', 'sort'])
 
 const toggleSort = (field) => {
   if (props.sortBy === field) {
@@ -23,8 +23,6 @@ const sortIcon = (field) => {
   if (props.sortBy !== field) return 'mdi:unfold-more-horizontal'
   return props.sortOrder === 'desc' ? 'mdi:arrow-down' : 'mdi:arrow-up'
 }
-
-const fmt = (iso) => iso ? new Date(iso).toLocaleDateString('uz-UZ') : '—'
 </script>
 
 <template>
@@ -36,7 +34,6 @@ const fmt = (iso) => iso ? new Date(iso).toLocaleDateString('uz-UZ') : '—'
           <div class="lt-skeleton__cell lt-skeleton__cell--sm" />
           <div class="lt-skeleton__cell lt-skeleton__cell--md" />
           <div class="lt-skeleton__cell lt-skeleton__cell--lg" />
-          <div class="lt-skeleton__cell lt-skeleton__cell--sm" />
           <div class="lt-skeleton__cell lt-skeleton__cell--sm" />
           <div class="lt-skeleton__cell lt-skeleton__cell--sm" />
         </div>
@@ -73,18 +70,6 @@ const fmt = (iso) => iso ? new Date(iso).toLocaleDateString('uz-UZ') : '—'
               <Icon :icon="sortIcon('is_active')" class="lt-sort" :class="{ 'lt-sort--on': sortBy === 'is_active' }" />
             </div>
           </th>
-          <th class="lt-th lt-th--sortable" @click="toggleSort('created_at')">
-            <div class="lt-th__inner">
-              <span>Yaratilgan</span>
-              <Icon :icon="sortIcon('created_at')" class="lt-sort" :class="{ 'lt-sort--on': sortBy === 'created_at' }" />
-            </div>
-          </th>
-          <th class="lt-th lt-th--sortable" @click="toggleSort('updated_at')">
-            <div class="lt-th__inner">
-              <span>Yangilangan</span>
-              <Icon :icon="sortIcon('updated_at')" class="lt-sort" :class="{ 'lt-sort--on': sortBy === 'updated_at' }" />
-            </div>
-          </th>
           <th class="lt-th lt-th--actions">Amallar</th>
         </tr>
       </thead>
@@ -108,11 +93,11 @@ const fmt = (iso) => iso ? new Date(iso).toLocaleDateString('uz-UZ') : '—'
             </span>
           </td>
 
-          <td class="lt-td lt-td--date">{{ fmt(item.created_at) }}</td>
-          <td class="lt-td lt-td--date">{{ fmt(item.updated_at) }}</td>
-
           <td class="lt-td lt-td--actions">
             <div class="lt-actions">
+              <button class="lt-btn lt-btn--show"   @click="emit('show', item)"   title="Ko'rish">
+                <Icon icon="mdi:eye-outline" />
+              </button>
               <button class="lt-btn lt-btn--edit"   @click="emit('edit', item)"   title="Tahrirlash">
                 <Icon icon="mdi:pencil-outline" />
               </button>
@@ -129,27 +114,24 @@ const fmt = (iso) => iso ? new Date(iso).toLocaleDateString('uz-UZ') : '—'
 </template>
 
 <style scoped>
-/* Skeleton */
 .lt-skeleton { display:flex; flex-direction:column; gap:1px; }
-.lt-skeleton__row { display:grid; grid-template-columns:60px 1fr 1fr 100px 100px 100px 100px; gap:16px; padding:14px 16px; border-bottom:1px solid var(--border); align-items:center; }
+.lt-skeleton__row { display:grid; grid-template-columns:60px 1fr 1fr 100px 120px; gap:16px; padding:14px 16px; border-bottom:1px solid var(--border); align-items:center; }
 .lt-skeleton__cell { height:14px; border-radius:8px; background:linear-gradient(90deg,var(--bg-elevated) 25%,rgba(255,255,255,.06) 50%,var(--bg-elevated) 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; }
 .lt-skeleton__cell--sm { width:50%; }
 .lt-skeleton__cell--md { width:75%; }
 .lt-skeleton__cell--lg { width:100%; }
 @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
-/* Empty */
 .lt-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:64px 24px; gap:12px; text-align:center; }
 .lt-empty__icon { width:72px; height:72px; border-radius:20px; background:var(--bg-elevated); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:32px; color:var(--muted); margin-bottom:4px; }
 .lt-empty__title { font-size:16px; font-weight:700; color:var(--text); }
 .lt-empty__sub { font-size:13px; color:var(--muted); max-width:320px; line-height:1.5; }
 
-/* Table */
 .lt-table { width:100%; border-collapse:collapse; }
 .lt-th { padding:12px 14px; text-align:left; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); border-bottom:1px solid var(--border); white-space:nowrap; background:rgba(255,255,255,.02); }
 .lt-th--sortable { cursor:pointer; user-select:none; transition:color .15s; }
 .lt-th--sortable:hover { color:var(--text-secondary); }
-.lt-th--actions { text-align:center; width:100px; }
+.lt-th--actions { text-align:center; width:120px; }
 .lt-th__inner { display:inline-flex; align-items:center; gap:5px; }
 .lt-sort { font-size:14px; color:var(--border-hover); transition:color .15s; }
 .lt-sort--on { color:#6366f1; }
@@ -161,7 +143,6 @@ const fmt = (iso) => iso ? new Date(iso).toLocaleDateString('uz-UZ') : '—'
 .lt-td { padding:13px 14px; color:var(--text); font-size:14px; vertical-align:middle; }
 .lt-td--id { color:var(--muted); font-size:12px; font-weight:600; width:60px; }
 .lt-td--desc { color:var(--muted); font-size:13px; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.lt-td--date { font-size:12px; color:var(--muted); white-space:nowrap; }
 .lt-td--actions { text-align:center; }
 
 .lt-name { display:flex; align-items:center; gap:10px; }
@@ -175,9 +156,11 @@ const fmt = (iso) => iso ? new Date(iso).toLocaleDateString('uz-UZ') : '—'
 .lt-badge--inactive .lt-badge__dot { background:#f87171; }
 @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(.85)} }
 
-.lt-actions { display:flex; align-items:center; justify-content:center; gap:8px; }
-.lt-btn { width:32px; height:32px; border:none; border-radius:9px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; transition:all .2s; color:white; }
+.lt-actions { display:flex; align-items:center; justify-content:center; gap:6px; }
+.lt-btn { width:34px; height:34px; border:none; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; transition:all .2s; color:white; }
 .lt-btn:hover { transform:translateY(-2px); }
+.lt-btn--show { background:linear-gradient(135deg,#0ea5e9,#06b6d4); box-shadow:0 2px 8px rgba(14,165,233,.3); }
+.lt-btn--show:hover { box-shadow:0 6px 16px rgba(14,165,233,.45); }
 .lt-btn--edit { background:linear-gradient(135deg,#3b82f6,#6366f1); box-shadow:0 2px 8px rgba(99,102,241,.3); }
 .lt-btn--edit:hover { box-shadow:0 6px 16px rgba(99,102,241,.45); }
 .lt-btn--delete { background:linear-gradient(135deg,#ef4444,#f97316); box-shadow:0 2px 8px rgba(239,68,68,.3); }

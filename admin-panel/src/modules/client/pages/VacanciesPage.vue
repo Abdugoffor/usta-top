@@ -74,12 +74,13 @@ const {
   hasMore,
   items: vacancies,
   loading,
+  loadMore,
   loadingMore,
   mobileFilterOpen,
   onSortChange,
+  remaining,
   search,
   secondaryTotal: totalMasters,
-  sentinel,
   sortBy,
   total: totalVacancies,
 } = useClientListingPage({
@@ -212,10 +213,19 @@ const {
             </div>
           </template>
 
-          <div ref="sentinel" class="client-sentinel"></div>
-
-          <div v-if="loadingMore" class="client-load-more">
-            <div class="client-spinner"></div>
+          <div v-if="hasMore" class="client-load-more-wrap">
+            <button
+              class="client-load-more-btn"
+              :class="{ 'client-load-more-btn--loading': loadingMore }"
+              :disabled="loadingMore"
+              @click="loadMore"
+            >
+              <span v-if="loadingMore" class="client-load-more-btn__spinner"></span>
+              <template v-else>
+                Ko'proq yuklash
+                <span class="client-load-more-btn__count">({{ remaining }} ta qoldi)</span>
+              </template>
+            </button>
           </div>
 
           <div v-if="!hasMore && vacancies.length > 0 && !loading" class="client-end">

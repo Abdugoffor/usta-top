@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
-import * as api from '../api/languageApi'
+import * as api from '../api/vacancyApi'
 
-export const useLanguageStore = defineStore('language', {
+export const useVacancyStore = defineStore('vacancy_admin', {
   state: () => ({
     items: [],
     item: null,
@@ -21,11 +21,11 @@ export const useLanguageStore = defineStore('language', {
   },
 
   actions: {
-    async fetchLanguages(params = {}) {
+    async fetchVacancies(params = {}) {
       this.loading = true
       try {
         const cursor = this.cursorStack[this.stackIndex]
-        const { data } = await api.getLanguages({
+        const { data } = await api.getVacancies({
           ...params,
           limit: this.limit,
           cursor: cursor || undefined,
@@ -43,24 +43,24 @@ export const useLanguageStore = defineStore('language', {
       if (!this.hasMore || !this.nextCursor) return
       this.cursorStack = [...this.cursorStack.slice(0, this.stackIndex + 1), this.nextCursor]
       this.stackIndex++
-      await this.fetchLanguages(params)
+      await this.fetchVacancies(params)
     },
 
     async goPrev(params = {}) {
       if (this.stackIndex <= 0) return
       this.stackIndex--
-      await this.fetchLanguages(params)
+      await this.fetchVacancies(params)
     },
 
     resetCursor() {
       this.cursorStack = ['']
-      this.stackIndex  = 0
+      this.stackIndex = 0
     },
 
-    async fetchLanguage(id) {
+    async fetchVacancy(slug) {
       this.loading = true
       try {
-        const { data } = await api.getLanguage(id)
+        const { data } = await api.getVacancy(slug)
         this.item = data
         return this.item
       } finally {
@@ -68,8 +68,7 @@ export const useLanguageStore = defineStore('language', {
       }
     },
 
-    async createLanguage(payload)     { return api.createLanguage(payload) },
-    async updateLanguage(id, payload) { return api.updateLanguage(id, payload) },
-    async removeLanguage(id)          { return api.deleteLanguage(id) },
+    async updateVacancy(id, payload) { return api.updateVacancy(id, payload) },
+    async removeVacancy(id)          { return api.deleteVacancy(id) },
   },
 })

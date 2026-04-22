@@ -229,7 +229,7 @@ func (s *countryService) ListTree(ctx context.Context, parentID *int64, f countr
 
 	rootArgs := append(args, limit+1)
 	rootQuery := fmt.Sprintf(
-		"SELECT c.id FROM countries c WHERE %s ORDER BY c.id DESC LIMIT $%d",
+		"SELECT c.id FROM countries c WHERE %s ORDER BY c.name  ASC LIMIT $%d",
 		strings.Join(conditions, " AND "), idx,
 	)
 
