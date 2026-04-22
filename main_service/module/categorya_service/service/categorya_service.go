@@ -17,7 +17,7 @@ type CategoryService interface {
 	GetByID(ctx context.Context, id int64) (*categorya_dto.CategoryResponse, error)
 	Update(ctx context.Context, id int64, req categorya_dto.UpdateCategoryRequest) (*categorya_dto.CategoryResponse, error)
 	Delete(ctx context.Context, id int64) error
-	List(ctx context.Context, f categorya_dto.CategoryFilter, page, limit int, sortCol, sortOrder string) ([]*categorya_dto.CategoryResponse, int64, error)
+	List(ctx context.Context, f categorya_dto.CategoryFilter, afterID int64, limit int) ([]*categorya_dto.CategoryResponse, bool, error)
 }
 
 // ─── Implementation ──────────────────────────────────────────────────────────
@@ -120,67 +120,57 @@ func (s *categoryService) Delete(ctx context.Context, id int64) error {
 
 // ─── List ────────────────────────────────────────────────────────────────────
 
-func (s *categoryService) List(ctx context.Context, f categorya_dto.CategoryFilter, page, limit int, sortCol, sortOrder string) ([]*categorya_dto.CategoryResponse, int64, error) {
+func (s *categoryService) List(ctx context.Context, f categorya_dto.CategoryFilter, afterID int64, limit int) ([]*categorya_dto.CategoryResponse, bool, error) {
 	args := []interface{}{}
-
 	conditions := []string{"c.deleted_at IS NULL"}
-
 	idx := 1
 
+	if afterID > 0 {
+		conditions = append(conditions, fmt.Sprintf("c.id < $%d", idx))
+		args = append(args, afterID)
+		idx++
+	}
 	if f.Name != "" {
 		conditions = append(conditions, fmt.Sprintf("c.name ILIKE $%d", idx))
 		args = append(args, "%"+f.Name+"%")
 		idx++
 	}
-
 	if f.IsActive != nil {
 		conditions = append(conditions, fmt.Sprintf("c.is_active = $%d", idx))
 		args = append(args, *f.IsActive)
 		idx++
 	}
 
-	col := validSortCols[sortCol]
-
-	if col == "" {
-		col = "c.id"
-	}
-
-	if sortOrder != "DESC" {
-		sortOrder = "ASC"
-	}
-
-	args = append(args, limit, (page-1)*limit)
-
+	args = append(args, limit+1)
 	query := fmt.Sprintf(`
-		SELECT c.id, c.name, c.is_active, c.created_at, c.updated_at, c.deleted_at,
-		       COUNT(*) OVER() AS total
+		SELECT c.id, c.name, c.is_active, c.created_at, c.updated_at, c.deleted_at
 		FROM categories c
 		WHERE %s
-		ORDER BY %s %s
-		LIMIT $%d OFFSET $%d
-	`, strings.Join(conditions, " AND "), col, sortOrder, idx, idx+1)
+		ORDER BY c.id DESC
+		LIMIT $%d
+	`, strings.Join(conditions, " AND "), idx)
 
 	rows, err := s.db.Query(ctx, query, args...)
-	{
-		if err != nil {
-			return nil, 0, err
-		}
+	if err != nil {
+		return nil, false, err
 	}
-
 	defer rows.Close()
 
-	var total int64
-
 	var items []*categorya_dto.CategoryResponse
-	{
-		for rows.Next() {
-			var r categorya_dto.CategoryResponse
-			if err := rows.Scan(&r.ID, &r.Name, &r.IsActive, &r.CreatedAt, &r.UpdatedAt, &r.DeletedAt, &total); err != nil {
-				return nil, 0, err
-			}
-			items = append(items, &r)
+	for rows.Next() {
+		var r categorya_dto.CategoryResponse
+		if err := rows.Scan(&r.ID, &r.Name, &r.IsActive, &r.CreatedAt, &r.UpdatedAt, &r.DeletedAt); err != nil {
+			return nil, false, err
 		}
+		items = append(items, &r)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, err
 	}
 
-	return items, total, rows.Err()
+	hasMore := len(items) > limit
+	if hasMore {
+		items = items[:limit]
+	}
+	return items, hasMore, nil
 }

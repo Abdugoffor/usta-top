@@ -19,7 +19,7 @@ type VacancyService interface {
 	GetBySlug(ctx context.Context, slug string) (*vacancy_dto.VacancyResponse, error)
 	Update(ctx context.Context, id, userID int64, req vacancy_dto.UpdateVacancyRequest) (*vacancy_dto.VacancyResponse, error)
 	Delete(ctx context.Context, id, userID int64) error
-	List(ctx context.Context, f vacancy_dto.VacancyFilter, page, limit int, sortCol, sortOrder string) ([]*vacancy_dto.VacancyResponse, int64, error)
+	List(ctx context.Context, f vacancy_dto.VacancyFilter, afterID int64, limit int) ([]*vacancy_dto.VacancyResponse, bool, error)
 }
 
 // ─── Implementation ──────────────────────────────────────────────────────────
@@ -209,11 +209,16 @@ func (s *vacancyService) Delete(ctx context.Context, id, userID int64) error {
 
 // ─── List ────────────────────────────────────────────────────────────────────
 
-func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, page, limit int, sortCol, sortOrder string) ([]*vacancy_dto.VacancyResponse, int64, error) {
+func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, afterID int64, limit int) ([]*vacancy_dto.VacancyResponse, bool, error) {
 	args := []interface{}{}
 	conditions := []string{"v.deleted_at IS NULL"}
 	idx := 1
 
+	if afterID > 0 {
+		conditions = append(conditions, fmt.Sprintf("v.id < $%d", idx))
+		args = append(args, afterID)
+		idx++
+	}
 	if f.UserID != nil {
 		conditions = append(conditions, fmt.Sprintf("v.user_id = $%d", idx))
 		args = append(args, *f.UserID)
@@ -265,15 +270,7 @@ func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, 
 		idx++
 	}
 
-	col := validSortCols[sortCol]
-	if col == "" {
-		col = "v.id"
-	}
-	if sortOrder != "DESC" {
-		sortOrder = "ASC"
-	}
-
-	args = append(args, limit, (page-1)*limit)
+	args = append(args, limit+1)
 	query := fmt.Sprintf(`
 		SELECT v.id, v.slug, v.user_id,
 		       v.region_id,   COALESCE(r.name, ''),
@@ -281,25 +278,23 @@ func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, 
 		       v.mahalla_id,  COALESCE(m.name, ''),
 		       v.adress, v.name, v.title, v.text, v.contact,
 		       v.price, v.views_count, v.is_active,
-		       v.created_at, v.updated_at, v.deleted_at,
-		       COUNT(*) OVER() AS total
+		       v.created_at, v.updated_at, v.deleted_at
 		FROM vacancies v
 		LEFT JOIN countries r ON r.id = v.region_id   AND r.deleted_at IS NULL
 		LEFT JOIN countries d ON d.id = v.district_id AND d.deleted_at IS NULL
 		LEFT JOIN countries m ON m.id = v.mahalla_id  AND m.deleted_at IS NULL
 		WHERE %s
-		ORDER BY %s %s
-		LIMIT $%d OFFSET $%d
-	`, strings.Join(conditions, " AND "), col, sortOrder, idx, idx+1)
+		ORDER BY v.id DESC
+		LIMIT $%d
+	`, strings.Join(conditions, " AND "), idx)
 
 	rows, err := s.db.Query(ctx, query, args...)
 	if err != nil {
-		return nil, 0, err
+		return nil, false, err
 	}
 	defer rows.Close()
 
 	var items []*vacancy_dto.VacancyResponse
-	var total int64
 	for rows.Next() {
 		var v vacancy_dto.VacancyResponse
 		if err := rows.Scan(
@@ -310,11 +305,18 @@ func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, 
 			&v.Adress, &v.Name, &v.Title, &v.Text, &v.Contact,
 			&v.Price, &v.ViewsCount, &v.IsActive,
 			&v.CreatedAt, &v.UpdatedAt, &v.DeletedAt,
-			&total,
 		); err != nil {
-			return nil, 0, err
+			return nil, false, err
 		}
 		items = append(items, &v)
 	}
-	return items, total, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, false, err
+	}
+
+	hasMore := len(items) > limit
+	if hasMore {
+		items = items[:limit]
+	}
+	return items, hasMore, nil
 }

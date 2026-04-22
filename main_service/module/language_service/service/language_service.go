@@ -17,7 +17,7 @@ type LanguageService interface {
 	GetByID(ctx context.Context, id int64) (*language_dto.LanguageResponse, error)
 	Update(ctx context.Context, id int64, req language_dto.UpdateLanguageRequest) (*language_dto.LanguageResponse, error)
 	Delete(ctx context.Context, id int64) error
-	List(ctx context.Context, f language_dto.LanguageFilter, page, limit int, sortCol, sortOrder string) ([]*language_dto.LanguageResponse, int64, error)
+	List(ctx context.Context, f language_dto.LanguageFilter, afterID int64, limit int) ([]*language_dto.LanguageResponse, bool, error)
 }
 
 // ─── Implementation ──────────────────────────────────────────────────────────
@@ -137,71 +137,61 @@ func (s *languageService) Delete(ctx context.Context, id int64) error {
 
 // ─── List ────────────────────────────────────────────────────────────────────
 
-func (s *languageService) List(ctx context.Context, f language_dto.LanguageFilter, page, limit int, sortCol, sortOrder string) ([]*language_dto.LanguageResponse, int64, error) {
+func (s *languageService) List(ctx context.Context, f language_dto.LanguageFilter, afterID int64, limit int) ([]*language_dto.LanguageResponse, bool, error) {
 	args := []interface{}{}
 	conditions := []string{"l.deleted_at IS NULL"}
 	idx := 1
 
+	if afterID > 0 {
+		conditions = append(conditions, fmt.Sprintf("l.id < $%d", idx))
+		args = append(args, afterID)
+		idx++
+	}
 	if f.Name != "" {
 		conditions = append(conditions, fmt.Sprintf("l.name ILIKE $%d", idx))
 		args = append(args, "%"+f.Name+"%")
 		idx++
 	}
-
 	if f.IsActive != nil {
 		conditions = append(conditions, fmt.Sprintf("l.is_active = $%d", idx))
 		args = append(args, *f.IsActive)
 		idx++
 	}
 
-	col := validSortCols[sortCol]
-	{
-		if col == "" {
-			col = "l.id"
-		}
-	}
-
-	if sortOrder != "DESC" {
-		sortOrder = "ASC"
-	}
-
-	args = append(args, limit, (page-1)*limit)
-
+	args = append(args, limit+1)
 	query := fmt.Sprintf(`
 		SELECT l.id, l.name, COALESCE(l.description, ''),
-		       l.is_active, l.created_at, l.updated_at, l.deleted_at,
-		       COUNT(*) OVER() AS total
+		       l.is_active, l.created_at, l.updated_at, l.deleted_at
 		FROM languages l
 		WHERE %s
-		ORDER BY %s %s
-		LIMIT $%d OFFSET $%d
-	`, strings.Join(conditions, " AND "), col, sortOrder, idx, idx+1)
+		ORDER BY l.id DESC
+		LIMIT $%d
+	`, strings.Join(conditions, " AND "), idx)
 
 	rows, err := s.db.Query(ctx, query, args...)
-	{
-		if err != nil {
-			return nil, 0, err
-		}
+	if err != nil {
+		return nil, false, err
 	}
-
 	defer rows.Close()
 
-	var total int64
-
 	var items []*language_dto.LanguageResponse
-	{
-		for rows.Next() {
-			var r language_dto.LanguageResponse
-			if err := rows.Scan(
-				&r.ID, &r.Name, &r.Description,
-				&r.IsActive, &r.CreatedAt, &r.UpdatedAt, &r.DeletedAt,
-				&total,
-			); err != nil {
-				return nil, 0, err
-			}
-			items = append(items, &r)
+	for rows.Next() {
+		var r language_dto.LanguageResponse
+		if err := rows.Scan(
+			&r.ID, &r.Name, &r.Description,
+			&r.IsActive, &r.CreatedAt, &r.UpdatedAt, &r.DeletedAt,
+		); err != nil {
+			return nil, false, err
 		}
+		items = append(items, &r)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, err
 	}
 
-	return items, total, rows.Err()
+	hasMore := len(items) > limit
+	if hasMore {
+		items = items[:limit]
+	}
+	return items, hasMore, nil
 }

@@ -102,12 +102,25 @@ func (h *vacancyHandler) Create(w http.ResponseWriter, r *http.Request, _ httpro
 // @Router       /vacancies [get]
 func (h *vacancyHandler) List(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	q := r.URL.Query()
-	pq := helper.ParsePage(r)
+	afterID, limit := helper.ParseCursorPage(r)
+
+	name := q.Get("name")
+	if len(name) > 100 {
+		name = name[:100]
+	}
+	title := q.Get("title")
+	if len(title) > 100 {
+		title = title[:100]
+	}
+	search := q.Get("search")
+	if len(search) > 100 {
+		search = search[:100]
+	}
 
 	f := vacancy_dto.VacancyFilter{
-		Name:   q.Get("name"),
-		Title:  q.Get("title"),
-		Search: q.Get("search"),
+		Name:   name,
+		Title:  title,
+		Search: search,
 	}
 
 	if v := q.Get("user_id"); v != "" {
@@ -115,54 +128,51 @@ func (h *vacancyHandler) List(w http.ResponseWriter, r *http.Request, _ httprout
 			f.UserID = &n
 		}
 	}
-
 	if v := q.Get("region_id"); v != "" {
 		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
 			f.RegionID = &n
 		}
 	}
-
 	if v := q.Get("district_id"); v != "" {
 		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
 			f.DistrictID = &n
 		}
 	}
-
 	if v := q.Get("mahalla_id"); v != "" {
 		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
 			f.MahallaID = &n
 		}
 	}
-
 	if v := q.Get("is_active"); v != "" {
 		if b, err := strconv.ParseBool(v); err == nil {
 			f.IsActive = &b
 		}
 	}
-
 	if v := q.Get("min_price"); v != "" {
 		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
 			f.MinPrice = &n
 		}
 	}
-
 	if v := q.Get("max_price"); v != "" {
 		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
 			f.MaxPrice = &n
 		}
 	}
 
-	items, total, err := h.service.List(r.Context(), f, pq.Page, pq.Limit, pq.SortCol, pq.SortOrder)
-	{
-		if err != nil {
-			helper.WriteInternalError(w, err)
-			return
-		}
+	items, hasMore, err := h.service.List(r.Context(), f, afterID, limit)
+	if err != nil {
+		helper.WriteInternalError(w, err)
+		return
+	}
+
+	var lastID int64
+	if len(items) > 0 {
+		lastID = items[len(items)-1].ID
 	}
 
 	helper.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"data": items,
-		"meta": helper.NewPageMeta(total, pq.Page, pq.Limit),
+		"meta": helper.NewCursorMeta(limit, hasMore, lastID),
 	})
 }
 

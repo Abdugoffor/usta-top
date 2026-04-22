@@ -17,8 +17,8 @@ type CountryService interface {
 	GetByID(ctx context.Context, id int64) (*country_dto.CountryResponse, error)
 	Update(ctx context.Context, id int64, req country_dto.UpdateCountryRequest) (*country_dto.CountryResponse, error)
 	Delete(ctx context.Context, id int64) error
-	List(ctx context.Context, f country_dto.CountryFilter, page, limit int, sortCol, sortOrder string) ([]*country_dto.CountryResponse, int64, error)
-	ListTree(ctx context.Context, parentID *int64, f country_dto.CountryFilter, page, limit int, sortCol, sortOrder string) ([]*country_dto.CountryResponse, int64, error)
+	List(ctx context.Context, f country_dto.CountryFilter, afterID int64, limit int) ([]*country_dto.CountryResponse, bool, error)
+	ListTree(ctx context.Context, parentID *int64, f country_dto.CountryFilter, afterID int64, limit int) ([]*country_dto.CountryResponse, bool, error)
 }
 
 // ─── Implementation ──────────────────────────────────────────────────────────
@@ -133,11 +133,16 @@ func (s *countryService) Delete(ctx context.Context, id int64) error {
 
 // ─── List ────────────────────────────────────────────────────────────────────
 
-func (s *countryService) List(ctx context.Context, f country_dto.CountryFilter, page, limit int, sortCol, sortOrder string) ([]*country_dto.CountryResponse, int64, error) {
+func (s *countryService) List(ctx context.Context, f country_dto.CountryFilter, afterID int64, limit int) ([]*country_dto.CountryResponse, bool, error) {
 	args := []interface{}{}
 	conditions := []string{"c.deleted_at IS NULL"}
 	idx := 1
 
+	if afterID > 0 {
+		conditions = append(conditions, fmt.Sprintf("c.id < $%d", idx))
+		args = append(args, afterID)
+		idx++
+	}
 	if f.ParentID != nil {
 		conditions = append(conditions, fmt.Sprintf("c.parent_id = $%d", idx))
 		args = append(args, *f.ParentID)
@@ -154,55 +159,56 @@ func (s *countryService) List(ctx context.Context, f country_dto.CountryFilter, 
 		idx++
 	}
 
-	col := validSortCols[sortCol]
-	if col == "" {
-		col = "c.id"
-	}
-	if sortOrder != "DESC" {
-		sortOrder = "ASC"
-	}
-
-	args = append(args, limit, (page-1)*limit)
+	args = append(args, limit+1)
 	query := fmt.Sprintf(`
 		SELECT c.id, c.parent_id, COALESCE(p.name, ''),
-		       c.name, c.is_active, c.created_at, c.updated_at, c.deleted_at,
-		       COUNT(*) OVER() AS total
+		       c.name, c.is_active, c.created_at, c.updated_at, c.deleted_at
 		FROM countries c
 		LEFT JOIN countries p ON p.id = c.parent_id AND p.deleted_at IS NULL
 		WHERE %s
-		ORDER BY %s %s
-		LIMIT $%d OFFSET $%d
-	`, strings.Join(conditions, " AND "), col, sortOrder, idx, idx+1)
+		ORDER BY c.id DESC
+		LIMIT $%d
+	`, strings.Join(conditions, " AND "), idx)
 
 	rows, err := s.db.Query(ctx, query, args...)
 	if err != nil {
-		return nil, 0, err
+		return nil, false, err
 	}
 	defer rows.Close()
 
 	var items []*country_dto.CountryResponse
-	var total int64
 	for rows.Next() {
 		var r country_dto.CountryResponse
 		if err := rows.Scan(
 			&r.ID, &r.ParentID, &r.ParentName,
 			&r.Name, &r.IsActive, &r.CreatedAt, &r.UpdatedAt, &r.DeletedAt,
-			&total,
 		); err != nil {
-			return nil, 0, err
+			return nil, false, err
 		}
 		items = append(items, &r)
 	}
-	return items, total, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, false, err
+	}
+	hasMore := len(items) > limit
+	if hasMore {
+		items = items[:limit]
+	}
+	return items, hasMore, nil
 }
 
 // ─── ListTree ────────────────────────────────────────────────────────────────
 
-func (s *countryService) ListTree(ctx context.Context, parentID *int64, f country_dto.CountryFilter, page, limit int, sortCol, sortOrder string) ([]*country_dto.CountryResponse, int64, error) {
+func (s *countryService) ListTree(ctx context.Context, parentID *int64, f country_dto.CountryFilter, afterID int64, limit int) ([]*country_dto.CountryResponse, bool, error) {
 	args := []interface{}{}
 	conditions := []string{"c.deleted_at IS NULL"}
 	idx := 1
 
+	if afterID > 0 {
+		conditions = append(conditions, fmt.Sprintf("c.id < $%d", idx))
+		args = append(args, afterID)
+		idx++
+	}
 	if parentID != nil {
 		conditions = append(conditions, fmt.Sprintf("c.parent_id = $%d", idx))
 		args = append(args, *parentID)
@@ -210,7 +216,6 @@ func (s *countryService) ListTree(ctx context.Context, parentID *int64, f countr
 	} else {
 		conditions = append(conditions, "c.parent_id = 0")
 	}
-
 	if f.Name != "" {
 		conditions = append(conditions, fmt.Sprintf("c.name ILIKE $%d", idx))
 		args = append(args, "%"+f.Name+"%")
@@ -222,30 +227,15 @@ func (s *countryService) ListTree(ctx context.Context, parentID *int64, f countr
 		idx++
 	}
 
-	where := strings.Join(conditions, " AND ")
-
-	var total int64
-	if err := s.db.QueryRow(ctx, "SELECT COUNT(*) FROM countries c WHERE "+where, args...).Scan(&total); err != nil {
-		return nil, 0, err
-	}
-
-	col := validSortCols[sortCol]
-	if col == "" {
-		col = "c.id"
-	}
-	if sortOrder != "DESC" {
-		sortOrder = "ASC"
-	}
-
-	rootArgs := append(args, limit, (page-1)*limit)
+	rootArgs := append(args, limit+1)
 	rootQuery := fmt.Sprintf(
-		"SELECT c.id FROM countries c WHERE %s ORDER BY %s %s LIMIT $%d OFFSET $%d",
-		where, col, sortOrder, idx, idx+1,
+		"SELECT c.id FROM countries c WHERE %s ORDER BY c.id DESC LIMIT $%d",
+		strings.Join(conditions, " AND "), idx,
 	)
 
 	rootRows, err := s.db.Query(ctx, rootQuery, rootArgs...)
 	if err != nil {
-		return nil, 0, err
+		return nil, false, err
 	}
 	defer rootRows.Close()
 
@@ -253,14 +243,19 @@ func (s *countryService) ListTree(ctx context.Context, parentID *int64, f countr
 	for rootRows.Next() {
 		var id int64
 		if err := rootRows.Scan(&id); err != nil {
-			return nil, 0, err
+			return nil, false, err
 		}
 		rootIDs = append(rootIDs, id)
 	}
 	rootRows.Close()
 
+	hasMore := len(rootIDs) > limit
+	if hasMore {
+		rootIDs = rootIDs[:limit]
+	}
+
 	if len(rootIDs) == 0 {
-		return []*country_dto.CountryResponse{}, total, nil
+		return []*country_dto.CountryResponse{}, hasMore, nil
 	}
 
 	allRows, err := s.db.Query(ctx, `
@@ -279,7 +274,7 @@ func (s *countryService) ListTree(ctx context.Context, parentID *int64, f countr
 		ORDER BY parent_id NULLS FIRST, id
 	`, rootIDs)
 	if err != nil {
-		return nil, 0, err
+		return nil, false, err
 	}
 	defer allRows.Close()
 
@@ -287,20 +282,19 @@ func (s *countryService) ListTree(ctx context.Context, parentID *int64, f countr
 	for allRows.Next() {
 		var r country_dto.CountryResponse
 		if err := allRows.Scan(&r.ID, &r.ParentID, &r.Name, &r.IsActive, &r.CreatedAt, &r.UpdatedAt, &r.DeletedAt); err != nil {
-			return nil, 0, err
+			return nil, false, err
 		}
 		rr := r
 		nodeMap[r.ID] = &rr
 	}
 	if err := allRows.Err(); err != nil {
-		return nil, 0, err
+		return nil, false, err
 	}
 
 	rootSet := make(map[int64]bool, len(rootIDs))
 	for _, id := range rootIDs {
 		rootSet[id] = true
 	}
-
 	for _, node := range nodeMap {
 		if !rootSet[node.ID] && node.ParentID != nil {
 			if parent, ok := nodeMap[*node.ParentID]; ok {
@@ -315,5 +309,5 @@ func (s *countryService) ListTree(ctx context.Context, parentID *int64, f countr
 			roots = append(roots, node)
 		}
 	}
-	return roots, total, nil
+	return roots, hasMore, nil
 }

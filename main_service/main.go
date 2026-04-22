@@ -78,10 +78,16 @@ func main() {
 		}
 	}
 
+	// 1 MB body limit, 30 req/s per IP with burst 60
+	handler := middleware.CORS(
+		middleware.RateLimit(30, 60)(
+			http.MaxBytesHandler(router, 1<<20),
+		),
+	)
+
 	log.Printf("🚀 Server started on :%s", port)
 	log.Printf("📖 Swagger UI: http://localhost:%s/swagger/index.html", port)
-	log.Fatal(http.ListenAndServe(":"+port, middleware.CORS(router)))
-	// log.Printf("🚀 Server started on http://172.20.10.13:%s", port)
+	log.Fatal(http.ListenAndServe(":"+port, handler))
 	// log.Printf("📖 Swagger UI: http://172.20.10.13:%s/swagger/index.html", port)
 	// log.Fatal(http.ListenAndServe("0.0.0.0:"+port, middleware.CORS(router)))
 }

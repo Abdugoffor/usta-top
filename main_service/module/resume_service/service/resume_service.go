@@ -19,7 +19,7 @@ type ResumeService interface {
 	GetBySlug(ctx context.Context, slug string) (*resume_dto.ResumeResponse, error)
 	Update(ctx context.Context, id, userID int64, req resume_dto.UpdateResumeRequest) (*resume_dto.ResumeResponse, error)
 	Delete(ctx context.Context, id, userID int64) error
-	List(ctx context.Context, f resume_dto.ResumeFilter, page, limit int, sortCol, sortOrder string) ([]*resume_dto.ResumeResponse, int64, error)
+	List(ctx context.Context, f resume_dto.ResumeFilter, afterID int64, limit int) ([]*resume_dto.ResumeResponse, bool, error)
 	AddCategory(ctx context.Context, resumeID, categoryID int64) error
 	RemoveCategory(ctx context.Context, resumeID, categoryID int64) error
 }
@@ -259,11 +259,16 @@ func (s *resumeService) RemoveCategory(ctx context.Context, resumeID, categoryID
 
 // ─── List ────────────────────────────────────────────────────────────────────
 
-func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, page, limit int, sortCol, sortOrder string) ([]*resume_dto.ResumeResponse, int64, error) {
+func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, afterID int64, limit int) ([]*resume_dto.ResumeResponse, bool, error) {
 	args := []interface{}{}
 	conditions := []string{"rs.deleted_at IS NULL"}
 	idx := 1
 
+	if afterID > 0 {
+		conditions = append(conditions, fmt.Sprintf("rs.id < $%d", idx))
+		args = append(args, afterID)
+		idx++
+	}
 	if f.UserID != nil {
 		conditions = append(conditions, fmt.Sprintf("rs.user_id = $%d", idx))
 		args = append(args, *f.UserID)
@@ -340,15 +345,7 @@ func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, pag
 		)`, strings.Join(placeholders, ",")))
 	}
 
-	col := validSortCols[sortCol]
-	if col == "" {
-		col = "rs.id"
-	}
-	if sortOrder != "DESC" {
-		sortOrder = "ASC"
-	}
-
-	args = append(args, limit, (page-1)*limit)
+	args = append(args, limit+1)
 	query := fmt.Sprintf(`
 		SELECT rs.id, rs.slug, rs.user_id,
 		       rs.region_id,   COALESCE(r.name, ''),
@@ -357,25 +354,23 @@ func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, pag
 		       rs.adress, rs.name, rs.photo, rs.title, rs.text, rs.contact,
 		       rs.price, rs.experience_year, rs.skills,
 		       rs.views_count, rs.is_active,
-		       rs.created_at, rs.updated_at, rs.deleted_at,
-		       COUNT(*) OVER() AS total
+		       rs.created_at, rs.updated_at, rs.deleted_at
 		FROM resumes rs
 		LEFT JOIN countries r ON r.id = rs.region_id   AND r.deleted_at IS NULL
 		LEFT JOIN countries d ON d.id = rs.district_id AND d.deleted_at IS NULL
 		LEFT JOIN countries m ON m.id = rs.mahalla_id  AND m.deleted_at IS NULL
 		WHERE %s
-		ORDER BY %s %s
-		LIMIT $%d OFFSET $%d
-	`, strings.Join(conditions, " AND "), col, sortOrder, idx, idx+1)
+		ORDER BY rs.id DESC
+		LIMIT $%d
+	`, strings.Join(conditions, " AND "), idx)
 
 	rows, err := s.db.Query(ctx, query, args...)
 	if err != nil {
-		return nil, 0, err
+		return nil, false, err
 	}
 	defer rows.Close()
 
 	var items []*resume_dto.ResumeResponse
-	var total int64
 	for rows.Next() {
 		var rs resume_dto.ResumeResponse
 		if err := rows.Scan(
@@ -387,18 +382,21 @@ func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, pag
 			&rs.Price, &rs.ExperienceYear, &rs.Skills,
 			&rs.ViewsCount, &rs.IsActive,
 			&rs.CreatedAt, &rs.UpdatedAt, &rs.DeletedAt,
-			&total,
 		); err != nil {
-			return nil, 0, err
+			return nil, false, err
 		}
 		rs.Categories = []resume_dto.CategoryShort{}
 		items = append(items, &rs)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, 0, err
+		return nil, false, err
 	}
 
-	// Batch-fetch categories for all resumes in one query
+	hasMore := len(items) > limit
+	if hasMore {
+		items = items[:limit]
+	}
+
 	if len(items) > 0 {
 		ids := make([]int64, len(items))
 		idxMap := make(map[int64]int, len(items))
@@ -406,7 +404,6 @@ func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, pag
 			ids[i] = item.ID
 			idxMap[item.ID] = i
 		}
-
 		catRows, err := s.db.Query(ctx, `
 			SELECT cr.resume_id, c.id, c.name, c.is_active
 			FROM category_resume cr
@@ -428,7 +425,7 @@ func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, pag
 		}
 	}
 
-	return items, total, nil
+	return items, hasMore, nil
 }
 
 // ─── pointer helpers ─────────────────────────────────────────────────────────

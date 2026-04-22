@@ -63,7 +63,7 @@ func (h *languageHandler) Create(w http.ResponseWriter, r *http.Request, _ httpr
 	resp, err := h.service.Create(r.Context(), req)
 	{
 		if err != nil {
-			helper.WriteError(w, http.StatusInternalServerError, err.Error())
+			helper.WriteInternalError(w, err)
 			return
 		}
 	}
@@ -86,11 +86,13 @@ func (h *languageHandler) Create(w http.ResponseWriter, r *http.Request, _ httpr
 // @Router       /languages [get]
 func (h *languageHandler) List(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	q := r.URL.Query()
-	pq := helper.ParsePage(r)
+	afterID, limit := helper.ParseCursorPage(r)
 
-	f := language_dto.LanguageFilter{
-		Name: q.Get("name"),
+	name := q.Get("name")
+	if len(name) > 100 {
+		name = name[:100]
 	}
+	f := language_dto.LanguageFilter{Name: name}
 
 	if v := q.Get("is_active"); v != "" {
 		if b, err := strconv.ParseBool(v); err == nil {
@@ -98,17 +100,20 @@ func (h *languageHandler) List(w http.ResponseWriter, r *http.Request, _ httprou
 		}
 	}
 
-	items, total, err := h.service.List(r.Context(), f, pq.Page, pq.Limit, pq.SortCol, pq.SortOrder)
-	{
-		if err != nil {
-			helper.WriteError(w, http.StatusInternalServerError, err.Error())
-			return
-		}
+	items, hasMore, err := h.service.List(r.Context(), f, afterID, limit)
+	if err != nil {
+		helper.WriteInternalError(w, err)
+		return
+	}
+
+	var lastID int64
+	if len(items) > 0 {
+		lastID = items[len(items)-1].ID
 	}
 
 	helper.WriteJSON(w, http.StatusOK, map[string]any{
 		"data": items,
-		"meta": helper.NewPageMeta(total, pq.Page, pq.Limit),
+		"meta": helper.NewCursorMeta(limit, hasMore, lastID),
 	})
 }
 

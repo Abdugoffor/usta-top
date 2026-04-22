@@ -59,7 +59,7 @@ func (s *userService) Register(ctx context.Context, req user_dto.RegisterRequest
 	)
 
 	if err != nil {
-		return nil, fmt.Errorf("phone allaqachon ro'yxatdan o'tgan yoki xatolik: %v", err)
+		return nil, fmt.Errorf("phone allaqachon ro'yxatdan o'tgan")
 	}
 
 	token, err := helper.GenerateToken(int(user.ID), user.Role)

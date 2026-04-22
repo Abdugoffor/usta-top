@@ -63,7 +63,7 @@ func (h *countryHandler) Create(w http.ResponseWriter, r *http.Request, _ httpro
 	resp, err := h.service.Create(r.Context(), req)
 	{
 		if err != nil {
-			helper.WriteError(w, http.StatusInternalServerError, err.Error())
+			helper.WriteInternalError(w, err)
 			return
 		}
 	}
@@ -87,11 +87,13 @@ func (h *countryHandler) Create(w http.ResponseWriter, r *http.Request, _ httpro
 // @Router       /countries [get]
 func (h *countryHandler) List(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	q := r.URL.Query()
-	pq := helper.ParsePage(r)
+	afterID, limit := helper.ParseCursorPage(r)
 
-	f := country_dto.CountryFilter{
-		Name: q.Get("name"),
+	name := q.Get("name")
+	if len(name) > 100 {
+		name = name[:100]
 	}
+	f := country_dto.CountryFilter{Name: name}
 
 	if v := q.Get("is_active"); v != "" {
 		if b, err := strconv.ParseBool(v); err == nil {
@@ -100,24 +102,26 @@ func (h *countryHandler) List(w http.ResponseWriter, r *http.Request, _ httprout
 	}
 
 	var parentID *int64
-
 	if v := q.Get("parent_id"); v != "" {
 		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
 			parentID = &n
 		}
 	}
 
-	items, total, err := h.service.ListTree(r.Context(), parentID, f, pq.Page, pq.Limit, pq.SortCol, pq.SortOrder)
-	{
-		if err != nil {
-			helper.WriteError(w, http.StatusInternalServerError, err.Error())
-			return
-		}
+	items, hasMore, err := h.service.ListTree(r.Context(), parentID, f, afterID, limit)
+	if err != nil {
+		helper.WriteInternalError(w, err)
+		return
+	}
+
+	var lastID int64
+	if len(items) > 0 {
+		lastID = items[len(items)-1].ID
 	}
 
 	helper.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"data": items,
-		"meta": helper.NewPageMeta(total, pq.Page, pq.Limit),
+		"meta": helper.NewCursorMeta(limit, hasMore, lastID),
 	})
 }
 
