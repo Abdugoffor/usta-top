@@ -21,3 +21,9 @@ type Vacancy struct {
 	UpdatedAt  *time.Time
 	DeletedAt  *time.Time
 }
+
+type CategoryVacancy struct {
+	ID          int64
+	CategoryaID int64
+	VacancyID   int64
+}

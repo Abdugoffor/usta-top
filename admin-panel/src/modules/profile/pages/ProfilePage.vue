@@ -9,18 +9,34 @@ import ClientHeader from '@/modules/client/components/ClientHeader.vue'
 const router = useRouter()
 const auth = useAuthStore()
 
+const LIMIT = 20
+
 const myResumes = ref([])
-const myVacancies = ref([])
+const resumesTotal = ref(0)
+const resumesCursor = ref(null)
+const resumesHasMore = ref(false)
 const loadingResumes = ref(false)
+const loadingMoreResumes = ref(false)
+
+const myVacancies = ref([])
+const vacanciesTotal = ref(0)
+const vacanciesCursor = ref(null)
+const vacanciesHasMore = ref(false)
 const loadingVacancies = ref(false)
+const loadingMoreVacancies = ref(false)
+
 const activeTab = ref('resumes')
 
 const fetchMyResumes = async () => {
   if (!auth.user?.id) return
   loadingResumes.value = true
   try {
-    const res = await getResumes({ user_id: auth.user.id, limit: 50 })
-    myResumes.value = res.data?.data || []
+    const res = await getResumes({ user_id: auth.user.id, limit: LIMIT })
+    const { data, meta } = res.data
+    myResumes.value = data || []
+    resumesTotal.value = meta?.total ?? 0
+    resumesCursor.value = meta?.next_cursor || null
+    resumesHasMore.value = meta?.has_more || false
   } catch {
     myResumes.value = []
   } finally {
@@ -28,16 +44,52 @@ const fetchMyResumes = async () => {
   }
 }
 
+const loadMoreResumes = async () => {
+  if (!resumesCursor.value || loadingMoreResumes.value) return
+  loadingMoreResumes.value = true
+  try {
+    const res = await getResumes({ user_id: auth.user.id, limit: LIMIT, cursor: resumesCursor.value })
+    const { data, meta } = res.data
+    myResumes.value.push(...(data || []))
+    resumesCursor.value = meta?.next_cursor || null
+    resumesHasMore.value = meta?.has_more || false
+  } catch {
+    // ignore
+  } finally {
+    loadingMoreResumes.value = false
+  }
+}
+
 const fetchMyVacancies = async () => {
   if (!auth.user?.id) return
   loadingVacancies.value = true
   try {
-    const res = await getVacancies({ user_id: auth.user.id, limit: 50 })
-    myVacancies.value = res.data?.data || []
+    const res = await getVacancies({ user_id: auth.user.id, limit: LIMIT })
+    const { data, meta } = res.data
+    myVacancies.value = data || []
+    vacanciesTotal.value = meta?.total ?? 0
+    vacanciesCursor.value = meta?.next_cursor || null
+    vacanciesHasMore.value = meta?.has_more || false
   } catch {
     myVacancies.value = []
   } finally {
     loadingVacancies.value = false
+  }
+}
+
+const loadMoreVacancies = async () => {
+  if (!vacanciesCursor.value || loadingMoreVacancies.value) return
+  loadingMoreVacancies.value = true
+  try {
+    const res = await getVacancies({ user_id: auth.user.id, limit: LIMIT, cursor: vacanciesCursor.value })
+    const { data, meta } = res.data
+    myVacancies.value.push(...(data || []))
+    vacanciesCursor.value = meta?.next_cursor || null
+    vacanciesHasMore.value = meta?.has_more || false
+  } catch {
+    // ignore
+  } finally {
+    loadingMoreVacancies.value = false
   }
 }
 
@@ -116,14 +168,14 @@ onMounted(() => {
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
               <polyline points="14 2 14 8 20 8"/>
             </svg>
-            Resumelarim ({{ myResumes.length }})
+            Resumelarim ({{ resumesTotal }})
           </button>
           <button class="profile-tab" :class="{ 'profile-tab--active': activeTab === 'vacancies' }" @click="activeTab = 'vacancies'">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
               <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
             </svg>
-            Vakansiyalarim ({{ myVacancies.length }})
+            Vakansiyalarim ({{ vacanciesTotal }})
           </button>
         </div>
 
@@ -141,45 +193,54 @@ onMounted(() => {
 
           <div v-if="loadingResumes" class="profile-loading">Yuklanmoqda...</div>
 
-          <div v-else-if="myResumes.length" class="profile-list">
-            <div v-for="r in myResumes" :key="r.id" class="profile-item">
-              <div class="profile-item__left">
-                <div class="profile-item__avatar" :style="{ background: '#2563eb' }">
-                  {{ (r.name || 'U').charAt(0).toUpperCase() }}
-                </div>
-                <div class="profile-item__info">
-                  <div class="profile-item__name">{{ r.name }}</div>
-                  <div class="profile-item__sub">{{ r.title }}</div>
-                  <div class="profile-item__meta">
-                    <span>{{ formatPrice(r.price) }}</span>
-                    <span v-if="r.experience_year">• {{ r.experience_year }} yil tajriba</span>
-                    <span>• {{ formatDate(r.created_at) }}</span>
+          <template v-else>
+            <div v-if="myResumes.length" class="profile-list">
+              <div v-for="r in myResumes" :key="r.id" class="profile-item">
+                <div class="profile-item__left">
+                  <div class="profile-item__avatar" :style="{ background: '#2563eb' }">
+                    {{ (r.name || 'U').charAt(0).toUpperCase() }}
+                  </div>
+                  <div class="profile-item__info">
+                    <div class="profile-item__name">{{ r.name }}</div>
+                    <div class="profile-item__sub">{{ r.title }}</div>
+                    <div class="profile-item__meta">
+                      <span>{{ formatPrice(r.price) }}</span>
+                      <span v-if="r.experience_year">• {{ r.experience_year }} yil tajriba</span>
+                      <span>• {{ formatDate(r.created_at) }}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div class="profile-item__right">
-                <span class="profile-item__badge" :class="r.is_active ? 'badge--active' : 'badge--inactive'">
-                  {{ r.is_active ? 'Faol' : 'Yopiq' }}
-                </span>
-                <RouterLink :to="{ name: 'master-detail', params: { slug: r.slug } }" class="profile-item__view">Ko'rish</RouterLink>
-                <RouterLink :to="{ name: 'resume-edit', params: { id: r.slug } }" class="profile-item__edit">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                </RouterLink>
-                <button class="profile-item__del" @click="doDeleteResume(r.id)">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                </button>
+                <div class="profile-item__right">
+                  <span class="profile-item__badge" :class="r.is_active ? 'badge--active' : 'badge--inactive'">
+                    {{ r.is_active ? 'Faol' : 'Yopiq' }}
+                  </span>
+                  <RouterLink :to="{ name: 'master-detail', params: { slug: r.slug } }" class="profile-item__view">Ko'rish</RouterLink>
+                  <RouterLink :to="{ name: 'resume-edit', params: { id: r.slug } }" class="profile-item__edit">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </RouterLink>
+                  <button class="profile-item__del" @click="doDeleteResume(r.id)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div v-else class="profile-empty">
-            <div class="profile-empty__icon">📄</div>
-            <h3>Resumelaringiz yo'q</h3>
-            <p>Birinchi resumeingizni yarating</p>
-            <RouterLink :to="{ name: 'resume-create' }" class="profile-create-btn profile-create-btn--lg">
-              Resume yaratish
-            </RouterLink>
-          </div>
+            <div v-if="resumesHasMore" class="profile-load-more">
+              <button class="load-more-btn" :disabled="loadingMoreResumes" @click="loadMoreResumes">
+                <span v-if="loadingMoreResumes">Yuklanmoqda...</span>
+                <span v-else>Ko'proq yuklash ({{ resumesTotal - myResumes.length }} ta qoldi)</span>
+              </button>
+            </div>
+
+            <div v-if="!myResumes.length" class="profile-empty">
+              <div class="profile-empty__icon">📄</div>
+              <h3>Resumelaringiz yo'q</h3>
+              <p>Birinchi resumeingizni yarating</p>
+              <RouterLink :to="{ name: 'resume-create' }" class="profile-create-btn profile-create-btn--lg">
+                Resume yaratish
+              </RouterLink>
+            </div>
+          </template>
         </div>
 
         <!-- Vacancies Tab -->
@@ -196,47 +257,56 @@ onMounted(() => {
 
           <div v-if="loadingVacancies" class="profile-loading">Yuklanmoqda...</div>
 
-          <div v-else-if="myVacancies.length" class="profile-list">
-            <div v-for="v in myVacancies" :key="v.id" class="profile-item">
-              <div class="profile-item__left">
-                <div class="profile-item__avatar" :style="{ background: '#f59e0b', color: '#92400e' }">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;">
-                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
-                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
-                  </svg>
-                </div>
-                <div class="profile-item__info">
-                  <div class="profile-item__name">{{ v.name }}</div>
-                  <div class="profile-item__sub">{{ v.title }}</div>
-                  <div class="profile-item__meta">
-                    <span>{{ formatPrice(v.price) }}</span>
-                    <span>• {{ formatDate(v.created_at) }}</span>
+          <template v-else>
+            <div v-if="myVacancies.length" class="profile-list">
+              <div v-for="v in myVacancies" :key="v.id" class="profile-item">
+                <div class="profile-item__left">
+                  <div class="profile-item__avatar" :style="{ background: '#f59e0b', color: '#92400e' }">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;">
+                      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+                      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                    </svg>
+                  </div>
+                  <div class="profile-item__info">
+                    <div class="profile-item__name">{{ v.name }}</div>
+                    <div class="profile-item__sub">{{ v.title }}</div>
+                    <div class="profile-item__meta">
+                      <span>{{ formatPrice(v.price) }}</span>
+                      <span>• {{ formatDate(v.created_at) }}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div class="profile-item__right">
-                <span class="profile-item__badge" :class="v.is_active ? 'badge--active' : 'badge--inactive'">
-                  {{ v.is_active ? 'Faol' : 'Yopiq' }}
-                </span>
-                <RouterLink :to="{ name: 'vacancy-detail', params: { slug: v.slug } }" class="profile-item__view">Ko'rish</RouterLink>
-                <RouterLink :to="{ name: 'vacancy-edit', params: { id: v.slug } }" class="profile-item__edit">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                </RouterLink>
-                <button class="profile-item__del" @click="doDeleteVacancy(v.id)">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                </button>
+                <div class="profile-item__right">
+                  <span class="profile-item__badge" :class="v.is_active ? 'badge--active' : 'badge--inactive'">
+                    {{ v.is_active ? 'Faol' : 'Yopiq' }}
+                  </span>
+                  <RouterLink :to="{ name: 'vacancy-detail', params: { slug: v.slug } }" class="profile-item__view">Ko'rish</RouterLink>
+                  <RouterLink :to="{ name: 'vacancy-edit', params: { id: v.slug } }" class="profile-item__edit">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </RouterLink>
+                  <button class="profile-item__del" @click="doDeleteVacancy(v.id)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div v-else class="profile-empty">
-            <div class="profile-empty__icon">📋</div>
-            <h3>Vakansiyalaringiz yo'q</h3>
-            <p>Birinchi vakansiyangizni e'lon qiling</p>
-            <RouterLink :to="{ name: 'vacancy-create' }" class="profile-create-btn profile-create-btn--lg">
-              Vakansiya e'lon qilish
-            </RouterLink>
-          </div>
+            <div v-if="vacanciesHasMore" class="profile-load-more">
+              <button class="load-more-btn" :disabled="loadingMoreVacancies" @click="loadMoreVacancies">
+                <span v-if="loadingMoreVacancies">Yuklanmoqda...</span>
+                <span v-else>Ko'proq yuklash ({{ vacanciesTotal - myVacancies.length }} ta qoldi)</span>
+              </button>
+            </div>
+
+            <div v-if="!myVacancies.length" class="profile-empty">
+              <div class="profile-empty__icon">📋</div>
+              <h3>Vakansiyalaringiz yo'q</h3>
+              <p>Birinchi vakansiyangizni e'lon qiling</p>
+              <RouterLink :to="{ name: 'vacancy-create' }" class="profile-create-btn profile-create-btn--lg">
+                Vakansiya e'lon qilish
+              </RouterLink>
+            </div>
+          </template>
         </div>
       </div>
     </div>
@@ -529,6 +599,28 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
 }
+
+.profile-load-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.load-more-btn {
+  padding: 12px 32px;
+  background: #fff;
+  border: 1.5px solid #2563eb;
+  color: #2563eb;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.load-more-btn:hover:not(:disabled) { background: #eff6ff; }
+.load-more-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .profile-empty__icon { font-size: 48px; margin-bottom: 16px; }
 

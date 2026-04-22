@@ -5,16 +5,17 @@ import "time"
 // ─── Request DTOs ────────────────────────────────────────────────────────────
 
 type CreateVacancyRequest struct {
-	RegionID   *int64 `json:"region_id"  validate:"omitempty,min=1"`
-	DistrictID *int64 `json:"district_id" validate:"omitempty,min=1"`
-	MahallaID  *int64 `json:"mahalla_id"  validate:"omitempty,min=1"`
-	Adress     string `json:"adress"   validate:"required,min=3,max=500"`
-	Name       string `json:"name"     validate:"required,min=2,max=255"`
-	Title      string `json:"title"    validate:"required,min=2,max=500"`
-	Text       string `json:"text"     validate:"required,min=10"`
-	Contact    string `json:"contact"  validate:"required,min=5,max=255"`
-	Price      *int64 `json:"price"`
-	IsActive   *bool  `json:"is_active"`
+	RegionID    *int64  `json:"region_id"   validate:"omitempty,min=1"`
+	DistrictID  *int64  `json:"district_id" validate:"omitempty,min=1"`
+	MahallaID   *int64  `json:"mahalla_id"  validate:"omitempty,min=1"`
+	Adress      string  `json:"adress"      validate:"required,min=3,max=500"`
+	Name        string  `json:"name"        validate:"required,min=2,max=255"`
+	Title       string  `json:"title"       validate:"required,min=2,max=500"`
+	Text        string  `json:"text"        validate:"required,min=10"`
+	Contact     string  `json:"contact"     validate:"required,min=5,max=255"`
+	Price       *int64  `json:"price"`
+	IsActive    *bool   `json:"is_active"`
+	CategoryIDs []int64 `json:"category_ids"`
 }
 
 type UpdateVacancyRequest struct {
@@ -33,18 +34,20 @@ type UpdateVacancyRequest struct {
 // ─── Filter ──────────────────────────────────────────────────────────────────
 
 type VacancyFilter struct {
-	UserID     *int64
-	RegionID   *int64
-	DistrictID *int64
-	MahallaID  *int64
-	Name       string
-	Title      string
-	Search     string
-	IsActive   *bool
-	MinPrice   *int64
-	MaxPrice   *int64
-	SortBy     string
-	SortOrder  string
+	UserID      *int64
+	RegionID    *int64
+	DistrictID  *int64
+	MahallaID   *int64
+	Name        string
+	Title       string
+	Search      string
+	IsActive    *bool
+	MinPrice    *int64
+	MaxPrice    *int64
+	CategoryID  *int64
+	CategoryIDs []int64
+	SortBy      string
+	SortOrder   string
 }
 
 // ─── Response DTOs ───────────────────────────────────────────────────────────
