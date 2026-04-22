@@ -31,6 +31,7 @@ import (
 	country_cmd "main_service/module/country_service"
 	language_cmd "main_service/module/language_service"
 	resume_cmd "main_service/module/resume_service"
+	upload_cmd "main_service/module/upload_service"
 	user_cmd "main_service/module/user_service"
 	vacancy_cmd "main_service/module/vacancy_service"
 	"net/http"
@@ -67,8 +68,10 @@ func main() {
 		vacancy_cmd.Cmd(router, db)
 		resume_cmd.Cmd(router, db)
 		comment_cmd.Cmd(router, db)
+		upload_cmd.Cmd(router)
 	}
 
+	router.ServeFiles("/uploads/*filepath", http.Dir("uploads"))
 	router.HandlerFunc(http.MethodGet, "/swagger/*filepath", httpSwagger.WrapHandler)
 
 	port := helper.ENV("APP_PORT")
@@ -78,10 +81,10 @@ func main() {
 		}
 	}
 
-	// 1 MB body limit, 30 req/s per IP with burst 60
+	// 4 MB body limit (3MB upload + overhead), 30 req/s per IP with burst 60
 	handler := middleware.CORS(
 		middleware.RateLimit(30, 60)(
-			http.MaxBytesHandler(router, 1<<20),
+			http.MaxBytesHandler(router, 4<<20),
 		),
 	)
 

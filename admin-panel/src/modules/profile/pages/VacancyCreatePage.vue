@@ -83,8 +83,9 @@ const submit = async () => {
 
 onMounted(async () => {
   if (!auth.isLoggedIn) { router.push({ name: 'login' }); return }
-  const res = await getCountries({ limit: 100 })
-  regions.value = (res.data?.data || []).filter(r => !r.parent_id)
+  // Viloyatlar — O'zbekistonning (id=196) to'g'ridan-to'g'ri bolalari
+  const res = await getCountries({ parent_id: 196, limit: 100 })
+  regions.value = res.data?.data || []
 })
 </script>
 

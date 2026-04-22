@@ -1,4 +1,8 @@
 @use 'variables' as *;
+@use '../../modules/client/styles/listing-shared';
+@use '../../modules/client/styles/home-page';
+@use '../../modules/client/styles/vacancies-page';
+@use '../../modules/client/styles/filter-sidebar';
 
 /* ─── Reset & Base ─────────────────────────────────────────── */
 *,

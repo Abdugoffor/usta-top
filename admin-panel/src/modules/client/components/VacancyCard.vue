@@ -1,11 +1,12 @@
 <script setup>
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 const props = defineProps({
   item: { type: Object, required: true }
 })
 
+const route = useRoute()
 const router = useRouter()
 
 const initials = computed(() => {
@@ -41,7 +42,13 @@ const timeAgo = computed(() => {
 })
 
 const goDetail = () => {
-  if (props.item.slug) router.push({ name: 'vacancy-detail', params: { slug: props.item.slug } })
+  if (props.item.slug) {
+    router.push({
+      name: 'vacancy-detail',
+      params: { slug: props.item.slug },
+      query: { ...route.query },
+    })
+  }
 }
 </script>
 

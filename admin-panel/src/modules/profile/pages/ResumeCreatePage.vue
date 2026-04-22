@@ -27,14 +27,37 @@ const form = ref({
   category_ids: [],
 })
 
-const categories = ref([])
-const regions = ref([])
-const districts = ref([])
-const mahallas = ref([])
+const categories  = ref([])
+const regions     = ref([])
+const districts   = ref([])
+const mahallas    = ref([])
 
-const loading = ref(false)
-const error = ref('')
-const fieldErrors = ref({})
+const loading          = ref(false)
+const error            = ref('')
+const fieldErrors      = ref({})
+const photoPreview     = ref('')
+const photoLoading     = ref(false)
+const photoUploadError = ref('')
+
+const apiHost = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1').replace(/\/api\/v1\/?$/, '')
+
+const uploadPhoto = async (e) => {
+  const file = e.target.files[0]
+  if (!file) return
+  photoLoading.value = true
+  photoUploadError.value = ''
+  const fd = new FormData()
+  fd.append('photo', file)
+  try {
+    const res = await axios.post('/upload', fd, { headers: { 'Content-Type': null } })
+    form.value.photo = apiHost + res.data.url
+    photoPreview.value = form.value.photo
+  } catch (err) {
+    photoUploadError.value = err.response?.data?.error || 'Rasm yuklanmadi'
+  } finally {
+    photoLoading.value = false
+  }
+}
 
 const selectRegion = async (val) => {
   form.value.region_id = val ? Number(val) : null
@@ -70,21 +93,21 @@ const submit = async () => {
   loading.value = true
   try {
     const payload = {
-      name: form.value.name,
-      title: form.value.title,
-      adress: form.value.adress,
-      text: form.value.text,
-      contact: form.value.contact,
-      photo: form.value.photo,
-      skills: form.value.skills,
-      is_active: form.value.is_active,
+      name:         form.value.name,
+      title:        form.value.title,
+      adress:       form.value.adress,
+      text:         form.value.text,
+      contact:      form.value.contact,
+      photo:        form.value.photo,
+      skills:       form.value.skills,
+      is_active:    form.value.is_active,
       category_ids: form.value.category_ids,
     }
-    if (form.value.price) payload.price = Number(form.value.price)
+    if (form.value.price)           payload.price           = Number(form.value.price)
     if (form.value.experience_year) payload.experience_year = Number(form.value.experience_year)
-    if (form.value.region_id) payload.region_id = form.value.region_id
-    if (form.value.district_id) payload.district_id = form.value.district_id
-    if (form.value.mahalla_id) payload.mahalla_id = form.value.mahalla_id
+    if (form.value.region_id)       payload.region_id       = form.value.region_id
+    if (form.value.district_id)     payload.district_id     = form.value.district_id
+    if (form.value.mahalla_id)      payload.mahalla_id      = form.value.mahalla_id
 
     await axios.post('/resumes', payload)
     router.push({ name: 'profile' })
@@ -99,12 +122,13 @@ const submit = async () => {
 
 onMounted(async () => {
   if (!auth.isLoggedIn) { router.push({ name: 'login' }); return }
+  // Viloyatlar — O'zbekistonning (id=196) to'g'ridan-to'g'ri bolalari
   const [catRes, regRes] = await Promise.all([
     getCategories({ limit: 50 }),
-    getCountries({ limit: 100 })
+    getCountries({ parent_id: 196, limit: 100 }),
   ])
   categories.value = catRes.data?.data || []
-  regions.value = (regRes.data?.data || []).filter(r => !r.parent_id)
+  regions.value    = regRes.data?.data || []
 })
 </script>
 
@@ -153,11 +177,6 @@ onMounted(async () => {
                 <input v-model="form.contact" type="text" placeholder="+998 90 123 45 67" required />
                 <span v-if="fieldErrors.contact" class="form-field__err">{{ fieldErrors.contact }}</span>
               </div>
-              <div class="form-field" :class="{ 'form-field--error': fieldErrors.photo }">
-                <label>Rasm URL <span class="req">*</span></label>
-                <input v-model="form.photo" type="url" placeholder="https://example.com/photo.jpg" required />
-                <span v-if="fieldErrors.photo" class="form-field__err">{{ fieldErrors.photo }}</span>
-              </div>
               <div class="form-field" :class="{ 'form-field--error': fieldErrors.price }">
                 <label>Narx (so'm / oyiga)</label>
                 <input v-model="form.price" type="number" placeholder="3000000" min="0" />
@@ -166,6 +185,50 @@ onMounted(async () => {
                 <label>Tajriba (yil)</label>
                 <input v-model="form.experience_year" type="number" placeholder="5" min="0" max="60" />
               </div>
+            </div>
+
+            <!-- Rasm yuklash -->
+            <div class="form-field form-field--full" :class="{ 'form-field--error': fieldErrors.photo || photoUploadError }">
+              <label>Rasm <span class="req">*</span></label>
+              <label class="photo-upload-area" :class="{ 'photo-upload-area--has': photoPreview, 'photo-upload-area--loading': photoLoading }">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  class="photo-file-input"
+                  :disabled="photoLoading"
+                  @change="uploadPhoto"
+                />
+                <template v-if="photoLoading">
+                  <div class="photo-state">
+                    <div class="photo-spinner"></div>
+                    <span>Yuklanmoqda...</span>
+                  </div>
+                </template>
+                <template v-else-if="photoPreview">
+                  <img :src="photoPreview" class="photo-preview-img" alt="preview" />
+                  <div class="photo-change-overlay">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="17 8 12 3 7 8"/>
+                      <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    <span>O'zgartirish</span>
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="photo-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    <span class="photo-state__title">Rasm yuklash</span>
+                    <span class="photo-state__hint">JPEG, PNG, GIF, WEBP · max 3 MB</span>
+                  </div>
+                </template>
+              </label>
+              <span v-if="photoUploadError" class="form-field__err">{{ photoUploadError }}</span>
+              <span v-else-if="fieldErrors.photo" class="form-field__err">{{ fieldErrors.photo }}</span>
             </div>
 
             <div class="form-field form-field--full" :class="{ 'form-field--error': fieldErrors.skills }">
@@ -258,7 +321,7 @@ onMounted(async () => {
 
           <div class="form-actions">
             <RouterLink to="/profile" class="form-cancel">Bekor qilish</RouterLink>
-            <button type="submit" class="form-submit" :disabled="loading">
+            <button type="submit" class="form-submit" :disabled="loading || photoLoading || !form.photo">
               <span v-if="loading" class="btn-spinner"></span>
               {{ loading ? 'Saqlanmoqda...' : 'Resume saqlash' }}
             </button>
@@ -299,7 +362,7 @@ onMounted(async () => {
 .create-back:hover { color: #fff; }
 
 .create-hero__inner h1 { font-size: 28px; font-weight: 800; color: #fff; margin-bottom: 6px; }
-.create-hero__inner p { font-size: 14px; color: rgba(255,255,255,0.75); }
+.create-hero__inner p  { font-size: 14px; color: rgba(255,255,255,0.75); }
 
 .create-main { padding: 28px 20px 48px; }
 .create-main__inner { max-width: 800px; margin: 0 auto; }
@@ -399,8 +462,90 @@ onMounted(async () => {
 .form-field--error textarea { border-color: #ef4444; }
 
 .form-field__hint { font-size: 11px; color: #9ca3af; }
-.form-field__err { font-size: 12px; color: #ef4444; font-weight: 500; }
+.form-field__err  { font-size: 12px; color: #ef4444; font-weight: 500; }
 
+/* ── Photo upload ── */
+.photo-upload-area {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  border: 2px dashed #d1d5db;
+  border-radius: 12px;
+  background: #f9fafb;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.photo-upload-area:hover { border-color: #2563eb; background: #eff6ff; }
+.photo-upload-area--loading { cursor: not-allowed; opacity: 0.7; }
+.photo-upload-area--has { border-style: solid; border-color: #2563eb; }
+.form-field--error .photo-upload-area { border-color: #ef4444; }
+
+.photo-file-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+}
+
+.photo-file-input:disabled { cursor: not-allowed; }
+
+.photo-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 20px;
+  pointer-events: none;
+}
+
+.photo-state svg { width: 40px; height: 40px; color: #9ca3af; }
+.photo-state__title { font-size: 14px; font-weight: 600; color: #374151; }
+.photo-state__hint  { font-size: 12px; color: #9ca3af; }
+
+.photo-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #dbeafe;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.photo-preview-img {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  display: block;
+}
+
+.photo-change-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.photo-upload-area:hover .photo-change-overlay { opacity: 1; }
+.photo-change-overlay svg  { width: 28px; height: 28px; color: #fff; }
+.photo-change-overlay span { font-size: 13px; font-weight: 600; color: #fff; }
+
+/* ── Categories ── */
 .cat-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .cat-chip {
@@ -425,6 +570,7 @@ onMounted(async () => {
   box-shadow: 0 2px 8px rgba(37,99,235,0.3);
 }
 
+/* ── Toggle ── */
 .toggle-row {
   display: flex;
   align-items: center;
@@ -433,7 +579,7 @@ onMounted(async () => {
 }
 
 .toggle-row__label { font-size: 14px; font-weight: 600; color: #374151; }
-.toggle-row__sub { font-size: 12px; color: #9ca3af; margin-top: 2px; }
+.toggle-row__sub   { font-size: 12px; color: #9ca3af; margin-top: 2px; }
 
 .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
 .toggle-switch input { opacity: 0; width: 0; height: 0; }
@@ -442,6 +588,7 @@ onMounted(async () => {
 .toggle-switch input:checked + .toggle-switch__slider { background: #2563eb; }
 .toggle-switch input:checked + .toggle-switch__slider::before { transform: translateX(20px); }
 
+/* ── Actions ── */
 .form-actions {
   display: flex;
   align-items: center;

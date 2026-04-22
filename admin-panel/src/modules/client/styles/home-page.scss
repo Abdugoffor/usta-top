@@ -1,0 +1,22 @@
+.client-page--home .client-hero {
+  background: linear-gradient(135deg, #1a3fbd 0%, #1d56db 40%, #2563eb 100%);
+}
+
+.client-page--home .client-stats-card__icon--accent {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.client-page--home .client-stats-card__number--accent {
+  color: #d97706;
+}
+
+.client-page--home .client-stats-card__arrow {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+@media (max-width: 640px) {
+  .client-page--home .client-toolbar {
+    flex-wrap: nowrap;
+  }
+}

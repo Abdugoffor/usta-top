@@ -102,7 +102,7 @@ func (h *vacancyHandler) Create(w http.ResponseWriter, r *http.Request, _ httpro
 // @Router       /vacancies [get]
 func (h *vacancyHandler) List(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	q := r.URL.Query()
-	afterID, limit := helper.ParseCursorPage(r)
+	cursor, limit := helper.ParseCursorPayload(r)
 
 	name := q.Get("name")
 	if len(name) > 100 {
@@ -118,9 +118,11 @@ func (h *vacancyHandler) List(w http.ResponseWriter, r *http.Request, _ httprout
 	}
 
 	f := vacancy_dto.VacancyFilter{
-		Name:   name,
-		Title:  title,
-		Search: search,
+		Name:      name,
+		Title:     title,
+		Search:    search,
+		SortBy:    strings.TrimSpace(q.Get("sort_by")),
+		SortOrder: strings.TrimSpace(q.Get("sort_order")),
 	}
 
 	if v := q.Get("user_id"); v != "" {
@@ -159,20 +161,24 @@ func (h *vacancyHandler) List(w http.ResponseWriter, r *http.Request, _ httprout
 		}
 	}
 
-	items, hasMore, total, err := h.service.List(r.Context(), f, afterID, limit)
+	items, hasMore, total, err := h.service.List(r.Context(), f, cursor, limit)
 	if err != nil {
 		helper.WriteInternalError(w, err)
 		return
 	}
 
 	var lastID int64
+	var lastValue string
 	if len(items) > 0 {
 		lastID = items[len(items)-1].ID
+		if f.SortBy == "price" && items[len(items)-1].Price != nil {
+			lastValue = strconv.FormatInt(*items[len(items)-1].Price, 10)
+		}
 	}
 
 	helper.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"data": items,
-		"meta": helper.NewCursorMeta(limit, hasMore, lastID, total),
+		"meta": helper.NewCursorMetaWithValue(limit, hasMore, lastID, lastValue, total),
 	})
 }
 

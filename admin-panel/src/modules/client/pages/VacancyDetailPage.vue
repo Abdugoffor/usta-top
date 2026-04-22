@@ -35,6 +35,10 @@ const timeAgo = computed(() => {
   return `${Math.floor(diff/86400)} kun oldin`
 })
 
+const goBack = () => {
+  router.push({ name: 'vacancies', query: { ...route.query } })
+}
+
 onMounted(async () => {
   try {
     const res = await getVacancy(route.params.slug)
@@ -58,7 +62,7 @@ onMounted(async () => {
     <template v-else-if="vacancy">
       <div class="vac-detail-hero">
         <div class="vac-detail-hero__inner">
-          <button class="detail-back" @click="router.back()">
+          <button class="detail-back" @click="goBack">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
             Orqaga
           </button>
@@ -155,7 +159,7 @@ onMounted(async () => {
               </div>
             </div>
 
-            <RouterLink to="/vacancies" class="back-link">
+            <RouterLink :to="{ name: 'vacancies', query: route.query }" class="back-link">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
               Barcha vakansiyalar
             </RouterLink>

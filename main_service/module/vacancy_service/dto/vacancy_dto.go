@@ -5,9 +5,9 @@ import "time"
 // ─── Request DTOs ────────────────────────────────────────────────────────────
 
 type CreateVacancyRequest struct {
-	RegionID   *int64 `json:"region_id"`
-	DistrictID *int64 `json:"district_id"`
-	MahallaID  *int64 `json:"mahalla_id"`
+	RegionID   *int64 `json:"region_id"  validate:"omitempty,min=1"`
+	DistrictID *int64 `json:"district_id" validate:"omitempty,min=1"`
+	MahallaID  *int64 `json:"mahalla_id"  validate:"omitempty,min=1"`
 	Adress     string `json:"adress"   validate:"required,min=3,max=500"`
 	Name       string `json:"name"     validate:"required,min=2,max=255"`
 	Title      string `json:"title"    validate:"required,min=2,max=500"`
@@ -18,9 +18,9 @@ type CreateVacancyRequest struct {
 }
 
 type UpdateVacancyRequest struct {
-	RegionID   *int64  `json:"region_id"`
-	DistrictID *int64  `json:"district_id"`
-	MahallaID  *int64  `json:"mahalla_id"`
+	RegionID   *int64  `json:"region_id"  validate:"omitempty,min=1"`
+	DistrictID *int64  `json:"district_id" validate:"omitempty,min=1"`
+	MahallaID  *int64  `json:"mahalla_id"  validate:"omitempty,min=1"`
 	Adress     *string `json:"adress"   validate:"omitempty,min=3,max=500"`
 	Name       *string `json:"name"     validate:"omitempty,min=2,max=255"`
 	Title      *string `json:"title"    validate:"omitempty,min=2,max=500"`
@@ -43,6 +43,8 @@ type VacancyFilter struct {
 	IsActive   *bool
 	MinPrice   *int64
 	MaxPrice   *int64
+	SortBy     string
+	SortOrder  string
 }
 
 // ─── Response DTOs ───────────────────────────────────────────────────────────

@@ -106,7 +106,7 @@ func (h *resumeHandler) Create(w http.ResponseWriter, r *http.Request, _ httprou
 // @Router       /resumes [get]
 func (h *resumeHandler) List(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	q := r.URL.Query()
-	afterID, limit := helper.ParseCursorPage(r)
+	cursor, limit := helper.ParseCursorPayload(r)
 
 	name := q.Get("name")
 	if len(name) > 100 {
@@ -122,9 +122,11 @@ func (h *resumeHandler) List(w http.ResponseWriter, r *http.Request, _ httproute
 	}
 
 	f := resume_dto.ResumeFilter{
-		Name:   name,
-		Title:  title,
-		Search: search,
+		Name:      name,
+		Title:     title,
+		Search:    search,
+		SortBy:    strings.TrimSpace(q.Get("sort_by")),
+		SortOrder: strings.TrimSpace(q.Get("sort_order")),
 	}
 
 	if catIDs := q.Get("category_ids"); catIDs != "" {
@@ -181,20 +183,31 @@ func (h *resumeHandler) List(w http.ResponseWriter, r *http.Request, _ httproute
 		}
 	}
 
-	items, hasMore, total, err := h.service.List(r.Context(), f, afterID, limit)
+	items, hasMore, total, err := h.service.List(r.Context(), f, cursor, limit)
 	if err != nil {
 		helper.WriteInternalError(w, err)
 		return
 	}
 
 	var lastID int64
+	var lastValue string
 	if len(items) > 0 {
 		lastID = items[len(items)-1].ID
+		switch f.SortBy {
+		case "price":
+			if items[len(items)-1].Price != nil {
+				lastValue = strconv.FormatInt(*items[len(items)-1].Price, 10)
+			}
+		case "experience_year":
+			if items[len(items)-1].ExperienceYear != nil {
+				lastValue = strconv.Itoa(*items[len(items)-1].ExperienceYear)
+			}
+		}
 	}
 
 	helper.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"data": items,
-		"meta": helper.NewCursorMeta(limit, hasMore, lastID, total),
+		"meta": helper.NewCursorMetaWithValue(limit, hasMore, lastID, lastValue, total),
 	})
 }
 

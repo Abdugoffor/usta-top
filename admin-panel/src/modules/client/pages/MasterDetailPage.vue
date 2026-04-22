@@ -35,6 +35,10 @@ const skills = computed(() => {
   return master.value.skills.split(',').map(s => s.trim()).filter(Boolean)
 })
 
+const goBack = () => {
+  router.push({ name: 'home', query: { ...route.query } })
+}
+
 onMounted(async () => {
   try {
     const res = await getResume(route.params.slug)
@@ -58,7 +62,7 @@ onMounted(async () => {
     <template v-else-if="master">
       <div class="detail-hero">
         <div class="detail-hero__inner">
-          <button class="detail-back" @click="router.back()">
+          <button class="detail-back" @click="goBack">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
             Orqaga
           </button>

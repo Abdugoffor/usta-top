@@ -214,7 +214,7 @@ func (s *countryService) ListTree(ctx context.Context, parentID *int64, f countr
 		args = append(args, *parentID)
 		idx++
 	} else {
-		conditions = append(conditions, "c.parent_id = 0")
+		conditions = append(conditions, "(c.parent_id = 196)")
 	}
 	if f.Name != "" {
 		conditions = append(conditions, fmt.Sprintf("c.name ILIKE $%d", idx))

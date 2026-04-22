@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"main_service/helper"
 	vacancy_dto "main_service/module/vacancy_service/dto"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,7 +20,7 @@ type VacancyService interface {
 	GetBySlug(ctx context.Context, slug string) (*vacancy_dto.VacancyResponse, error)
 	Update(ctx context.Context, id, userID int64, req vacancy_dto.UpdateVacancyRequest) (*vacancy_dto.VacancyResponse, error)
 	Delete(ctx context.Context, id, userID int64) error
-	List(ctx context.Context, f vacancy_dto.VacancyFilter, afterID int64, limit int) ([]*vacancy_dto.VacancyResponse, bool, int64, error)
+	List(ctx context.Context, f vacancy_dto.VacancyFilter, cursor helper.CursorPayload, limit int) ([]*vacancy_dto.VacancyResponse, bool, int64, error)
 }
 
 // ─── Implementation ──────────────────────────────────────────────────────────
@@ -110,9 +111,13 @@ func (s *vacancyService) GetByID(ctx context.Context, id int64) (*vacancy_dto.Va
 // ─── GetBySlug ───────────────────────────────────────────────────────────────
 
 func (s *vacancyService) GetBySlug(ctx context.Context, slug string) (*vacancy_dto.VacancyResponse, error) {
-	go s.db.Exec(context.Background(), `
-		UPDATE vacancies SET views_count = COALESCE(views_count, 0) + 1 WHERE slug = $1
-	`, slug)
+	go func() {
+		bgCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		_, _ = s.db.Exec(bgCtx, `
+			UPDATE vacancies SET views_count = COALESCE(views_count, 0) + 1 WHERE slug = $1
+		`, slug)
+	}()
 
 	var v vacancy_dto.VacancyResponse
 	row := s.db.QueryRow(ctx, vacancySelectJoin+`WHERE v.slug = $1 AND v.deleted_at IS NULL`, slug)
@@ -209,7 +214,7 @@ func (s *vacancyService) Delete(ctx context.Context, id, userID int64) error {
 
 // ─── List ────────────────────────────────────────────────────────────────────
 
-func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, afterID int64, limit int) ([]*vacancy_dto.VacancyResponse, bool, int64, error) {
+func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, cursor helper.CursorPayload, limit int) ([]*vacancy_dto.VacancyResponse, bool, int64, error) {
 	args := []interface{}{}
 	conditions := []string{"v.deleted_at IS NULL"}
 	idx := 1
@@ -270,12 +275,9 @@ func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, 
 	countSQL := fmt.Sprintf(`SELECT COUNT(*) FROM vacancies v WHERE %s`, strings.Join(conditions, " AND "))
 	s.db.QueryRow(ctx, countSQL, args...).Scan(&total)
 
-	// Cursor shartini faqat asosiy so'rovga qo'shamiz
-	if afterID > 0 {
-		conditions = append(conditions, fmt.Sprintf("v.id < $%d", idx))
-		args = append(args, afterID)
-		idx++
-	}
+	orderCol, valueExpr, cursorFallback, valueKind := vacancyOrderConfig(f.SortBy, f.SortOrder)
+	orderDir := normalizedOrder(f.SortOrder)
+	conditions, args, idx = appendCursorCondition(conditions, args, idx, "v", orderCol, valueExpr, cursorFallback, valueKind, orderDir, cursor)
 
 	args = append(args, limit+1)
 	query := fmt.Sprintf(`
@@ -291,9 +293,9 @@ func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, 
 		LEFT JOIN countries d ON d.id = v.district_id AND d.deleted_at IS NULL
 		LEFT JOIN countries m ON m.id = v.mahalla_id  AND m.deleted_at IS NULL
 		WHERE %s
-		ORDER BY v.id DESC
+		ORDER BY %s %s, v.id %s
 		LIMIT $%d
-	`, strings.Join(conditions, " AND "), idx)
+	`, strings.Join(conditions, " AND "), orderCol, orderDir, orderDir, idx)
 
 	rows, err := s.db.Query(ctx, query, args...)
 	if err != nil {
@@ -326,4 +328,59 @@ func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, 
 		items = items[:limit]
 	}
 	return items, hasMore, total, nil
+}
+
+func vacancyOrderConfig(sortBy, sortOrder string) (string, string, string, string) {
+	switch sortBy {
+	case "price":
+		if normalizedOrder(sortOrder) == "ASC" {
+			return "COALESCE(v.price, 9223372036854775807)", "price", "9223372036854775807", "int64"
+		}
+		return "COALESCE(v.price, -1)", "price", "-1", "int64"
+	default:
+		return "v.id", "", "", ""
+	}
+}
+
+func normalizedOrder(order string) string {
+	if strings.EqualFold(order, "asc") {
+		return "ASC"
+	}
+	return "DESC"
+}
+
+func appendCursorCondition(conditions []string, args []interface{}, idx int, idCol, orderCol, valueField, fallbackValue, valueKind, orderDir string, cursor helper.CursorPayload) ([]string, []interface{}, int) {
+	if cursor.ID <= 0 {
+		return conditions, args, idx
+	}
+	if orderCol == "v.id" {
+		op := "<"
+		if orderDir == "ASC" {
+			op = ">"
+		}
+		conditions = append(conditions, fmt.Sprintf("%s.id %s $%d", idCol, op, idx))
+		args = append(args, cursor.ID)
+		return conditions, args, idx + 1
+	}
+
+	cursorValue := fallbackValue
+	if cursor.Value != "" {
+		cursorValue = cursor.Value
+	}
+	op := "<"
+	if orderDir == "ASC" {
+		op = ">"
+	}
+	conditions = append(conditions, fmt.Sprintf("(%s %s $%d OR (%s = $%d AND %s.id %s $%d))", orderCol, op, idx, orderCol, idx, idCol, op, idx+1))
+	switch valueKind {
+	case "int64":
+		n, err := strconv.ParseInt(cursorValue, 10, 64)
+		if err != nil {
+			n, _ = strconv.ParseInt(fallbackValue, 10, 64)
+		}
+		args = append(args, n, cursor.ID)
+	default:
+		args = append(args, cursorValue, cursor.ID)
+	}
+	return conditions, args, idx + 2
 }

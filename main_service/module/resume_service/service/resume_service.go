@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"main_service/helper"
 	resume_dto "main_service/module/resume_service/dto"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,7 +20,7 @@ type ResumeService interface {
 	GetBySlug(ctx context.Context, slug string) (*resume_dto.ResumeResponse, error)
 	Update(ctx context.Context, id, userID int64, req resume_dto.UpdateResumeRequest) (*resume_dto.ResumeResponse, error)
 	Delete(ctx context.Context, id, userID int64) error
-	List(ctx context.Context, f resume_dto.ResumeFilter, afterID int64, limit int) ([]*resume_dto.ResumeResponse, bool, int64, error)
+	List(ctx context.Context, f resume_dto.ResumeFilter, cursor helper.CursorPayload, limit int) ([]*resume_dto.ResumeResponse, bool, int64, error)
 	AddCategory(ctx context.Context, resumeID, categoryID int64) error
 	RemoveCategory(ctx context.Context, resumeID, categoryID int64) error
 }
@@ -159,9 +160,13 @@ func (s *resumeService) GetByID(ctx context.Context, id int64) (*resume_dto.Resu
 // ─── GetBySlug ───────────────────────────────────────────────────────────────
 
 func (s *resumeService) GetBySlug(ctx context.Context, slug string) (*resume_dto.ResumeResponse, error) {
-	go s.db.Exec(context.Background(), `
-		UPDATE resumes SET views_count = COALESCE(views_count, 0) + 1 WHERE slug = $1
-	`, slug)
+	go func() {
+		bgCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		_, _ = s.db.Exec(bgCtx, `
+			UPDATE resumes SET views_count = COALESCE(views_count, 0) + 1 WHERE slug = $1
+		`, slug)
+	}()
 
 	var r resume_dto.ResumeResponse
 	row := s.db.QueryRow(ctx, resumeSelectJoin+`WHERE rs.slug = $1 AND rs.deleted_at IS NULL`, slug)
@@ -259,7 +264,7 @@ func (s *resumeService) RemoveCategory(ctx context.Context, resumeID, categoryID
 
 // ─── List ────────────────────────────────────────────────────────────────────
 
-func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, afterID int64, limit int) ([]*resume_dto.ResumeResponse, bool, int64, error) {
+func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, cursor helper.CursorPayload, limit int) ([]*resume_dto.ResumeResponse, bool, int64, error) {
 	args := []interface{}{}
 	conditions := []string{"rs.deleted_at IS NULL"}
 	idx := 1
@@ -345,12 +350,9 @@ func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, aft
 	countSQL := fmt.Sprintf(`SELECT COUNT(*) FROM resumes rs WHERE %s`, strings.Join(conditions, " AND "))
 	s.db.QueryRow(ctx, countSQL, args...).Scan(&total)
 
-	// Cursor shartini faqat asosiy so'rovga qo'shamiz
-	if afterID > 0 {
-		conditions = append(conditions, fmt.Sprintf("rs.id < $%d", idx))
-		args = append(args, afterID)
-		idx++
-	}
+	orderCol, fallbackValue, valueKind := resumeOrderConfig(f.SortBy, f.SortOrder)
+	orderDir := normalizedOrder(f.SortOrder)
+	conditions, args, idx = appendResumeCursorCondition(conditions, args, idx, orderCol, fallbackValue, valueKind, orderDir, cursor)
 
 	args = append(args, limit+1)
 	query := fmt.Sprintf(`
@@ -367,9 +369,9 @@ func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, aft
 		LEFT JOIN countries d ON d.id = rs.district_id AND d.deleted_at IS NULL
 		LEFT JOIN countries m ON m.id = rs.mahalla_id  AND m.deleted_at IS NULL
 		WHERE %s
-		ORDER BY rs.id DESC
+		ORDER BY %s %s, rs.id %s
 		LIMIT $%d
-	`, strings.Join(conditions, " AND "), idx)
+	`, strings.Join(conditions, " AND "), orderCol, orderDir, orderDir, idx)
 
 	rows, err := s.db.Query(ctx, query, args...)
 	if err != nil {
@@ -433,6 +435,72 @@ func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, aft
 	}
 
 	return items, hasMore, total, nil
+}
+
+func resumeOrderConfig(sortBy, sortOrder string) (string, string, string) {
+	switch sortBy {
+	case "price":
+		if normalizedOrder(sortOrder) == "ASC" {
+			return "COALESCE(rs.price, 9223372036854775807)", "9223372036854775807", "int64"
+		}
+		return "COALESCE(rs.price, -1)", "-1", "int64"
+	case "experience_year":
+		if normalizedOrder(sortOrder) == "ASC" {
+			return "COALESCE(rs.experience_year, 2147483647)", "2147483647", "int"
+		}
+		return "COALESCE(rs.experience_year, -1)", "-1", "int"
+	default:
+		return "rs.id", "", ""
+	}
+}
+
+func normalizedOrder(order string) string {
+	if strings.EqualFold(order, "asc") {
+		return "ASC"
+	}
+	return "DESC"
+}
+
+func appendResumeCursorCondition(conditions []string, args []interface{}, idx int, orderCol, fallbackValue, valueKind, orderDir string, cursor helper.CursorPayload) ([]string, []interface{}, int) {
+	if cursor.ID <= 0 {
+		return conditions, args, idx
+	}
+	if orderCol == "rs.id" {
+		op := "<"
+		if orderDir == "ASC" {
+			op = ">"
+		}
+		conditions = append(conditions, fmt.Sprintf("rs.id %s $%d", op, idx))
+		args = append(args, cursor.ID)
+		return conditions, args, idx + 1
+	}
+
+	cursorValue := fallbackValue
+	if cursor.Value != "" {
+		cursorValue = cursor.Value
+	}
+	op := "<"
+	if orderDir == "ASC" {
+		op = ">"
+	}
+	conditions = append(conditions, fmt.Sprintf("(%s %s $%d OR (%s = $%d AND rs.id %s $%d))", orderCol, op, idx, orderCol, idx, op, idx+1))
+	switch valueKind {
+	case "int64":
+		n, err := strconv.ParseInt(cursorValue, 10, 64)
+		if err != nil {
+			n, _ = strconv.ParseInt(fallbackValue, 10, 64)
+		}
+		args = append(args, n, cursor.ID)
+	case "int":
+		n, err := strconv.Atoi(cursorValue)
+		if err != nil {
+			n, _ = strconv.Atoi(fallbackValue)
+		}
+		args = append(args, n, cursor.ID)
+	default:
+		args = append(args, cursorValue, cursor.ID)
+	}
+	return conditions, args, idx + 2
 }
 
 // ─── pointer helpers ─────────────────────────────────────────────────────────

@@ -81,7 +81,7 @@ onMounted(async () => {
     const slug = route.params.id
     const [vacRes, regRes] = await Promise.all([
       getVacancy(slug),
-      getCountries({ limit: 100 }),
+      getCountries({ parent_id: 196, limit: 100 }),
     ])
     const v = vacRes.data
     vacancyId.value = v.id
@@ -97,7 +97,7 @@ onMounted(async () => {
       mahalla_id: v.mahalla_id || null,
       is_active: v.is_active ?? true,
     }
-    regions.value = (regRes.data?.data || []).filter(x => !x.parent_id)
+    regions.value = regRes.data?.data || []
 
     if (form.value.region_id) {
       const dr = await getCountries({ parent_id: form.value.region_id, limit: 100 })
