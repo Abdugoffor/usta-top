@@ -9,10 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
-
-// ─── Interface ───────────────────────────────────────────────────────────────
 
 type VacancyService interface {
 	Create(ctx context.Context, userID int64, req vacancy_dto.CreateVacancyRequest) (*vacancy_dto.VacancyResponse, error)
@@ -22,8 +21,6 @@ type VacancyService interface {
 	Delete(ctx context.Context, id, userID int64) error
 	List(ctx context.Context, f vacancy_dto.VacancyFilter, cursor helper.CursorPayload, limit int) ([]*vacancy_dto.VacancyResponse, bool, int64, error)
 }
-
-// ─── Implementation ──────────────────────────────────────────────────────────
 
 type vacancyService struct {
 	db *pgxpool.Pool
@@ -70,18 +67,90 @@ func scanVacancy(row interface{ Scan(...interface{}) error }, v *vacancy_dto.Vac
 	)
 }
 
-// ─── Create ──────────────────────────────────────────────────────────────────
+func (s *vacancyService) fetchCategories(ctx context.Context, vacancyID int64) ([]vacancy_dto.CategoryShort, error) {
+	rows, err := s.db.Query(ctx, `
+		SELECT c.id, c.name, c.is_active
+		FROM categories c
+		JOIN category_vacancy cv ON cv.categorya_id = c.id
+		WHERE cv.vacancy_id = $1 AND c.deleted_at IS NULL
+		ORDER BY c.id
+	`, vacancyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var cats []vacancy_dto.CategoryShort
+	for rows.Next() {
+		var cat vacancy_dto.CategoryShort
+		if err := rows.Scan(&cat.ID, &cat.Name, &cat.IsActive); err != nil {
+			return nil, err
+		}
+		cats = append(cats, cat)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if cats == nil {
+		cats = []vacancy_dto.CategoryShort{}
+	}
+	return cats, nil
+}
+
+func normalizeCategoryIDs(ids []int64) []int64 {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	seen := make(map[int64]struct{}, len(ids))
+	normalized := make([]int64, 0, len(ids))
+	for _, id := range ids {
+		if id <= 0 {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		normalized = append(normalized, id)
+	}
+	return normalized
+}
+
+func (s *vacancyService) attachCategories(ctx context.Context, tx pgx.Tx, vacancyID int64, categoryIDs []int64) error {
+	for _, catID := range normalizeCategoryIDs(categoryIDs) {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO category_vacancy (categorya_id, vacancy_id)
+			VALUES ($1, $2)
+			ON CONFLICT (categorya_id, vacancy_id) DO NOTHING
+		`, catID, vacancyID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *vacancyService) replaceCategories(ctx context.Context, tx pgx.Tx, vacancyID int64, categoryIDs []int64) error {
+	if _, err := tx.Exec(ctx, `DELETE FROM category_vacancy WHERE vacancy_id = $1`, vacancyID); err != nil {
+		return err
+	}
+	return s.attachCategories(ctx, tx, vacancyID, categoryIDs)
+}
 
 func (s *vacancyService) Create(ctx context.Context, userID int64, req vacancy_dto.CreateVacancyRequest) (*vacancy_dto.VacancyResponse, error) {
 	isActive := true
-	{
-		if req.IsActive != nil {
-			isActive = *req.IsActive
-		}
+	if req.IsActive != nil {
+		isActive = *req.IsActive
 	}
 
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
 	var id int64
-	err := s.db.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		INSERT INTO vacancies (user_id, region_id, district_id, mahalla_id, adress, name, title, text, contact, price, is_active)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id
@@ -92,23 +161,35 @@ func (s *vacancyService) Create(ctx context.Context, userID int64, req vacancy_d
 		return nil, err
 	}
 
-	slug := helper.Slug(req.Name, id)
-	if _, err := s.db.Exec(ctx, `UPDATE vacancies SET slug = $1 WHERE id = $2`, slug, id); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE vacancies SET slug = $1 WHERE id = $2`, helper.Slug(req.Name, id), id); err != nil {
+		return nil, err
+	}
+
+	if err := s.attachCategories(ctx, tx, id, req.CategoryIDs); err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
 
 	return s.GetByID(ctx, id)
 }
 
-// ─── GetByID ─────────────────────────────────────────────────────────────────
-
 func (s *vacancyService) GetByID(ctx context.Context, id int64) (*vacancy_dto.VacancyResponse, error) {
 	var v vacancy_dto.VacancyResponse
 	row := s.db.QueryRow(ctx, vacancySelectJoin+`WHERE v.id = $1 AND v.deleted_at IS NULL`, id)
-	return &v, scanVacancy(row, &v)
-}
+	if err := scanVacancy(row, &v); err != nil {
+		return nil, err
+	}
 
-// ─── GetBySlug ───────────────────────────────────────────────────────────────
+	cats, err := s.fetchCategories(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	v.Categories = cats
+	return &v, nil
+}
 
 func (s *vacancyService) GetBySlug(ctx context.Context, slug string) (*vacancy_dto.VacancyResponse, error) {
 	go func() {
@@ -121,12 +202,25 @@ func (s *vacancyService) GetBySlug(ctx context.Context, slug string) (*vacancy_d
 
 	var v vacancy_dto.VacancyResponse
 	row := s.db.QueryRow(ctx, vacancySelectJoin+`WHERE v.slug = $1 AND v.deleted_at IS NULL`, slug)
-	return &v, scanVacancy(row, &v)
+	if err := scanVacancy(row, &v); err != nil {
+		return nil, err
+	}
+
+	cats, err := s.fetchCategories(ctx, v.ID)
+	if err != nil {
+		return nil, err
+	}
+	v.Categories = cats
+	return &v, nil
 }
 
-// ─── Update ──────────────────────────────────────────────────────────────────
-
 func (s *vacancyService) Update(ctx context.Context, id, userID int64, req vacancy_dto.UpdateVacancyRequest) (*vacancy_dto.VacancyResponse, error) {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
 	setClauses := []string{"updated_at = NOW()"}
 	args := []interface{}{}
 	idx := 1
@@ -190,13 +284,22 @@ func (s *vacancyService) Update(ctx context.Context, id, userID int64, req vacan
 	`, strings.Join(setClauses, ", "), idx, idx+1)
 
 	var retID int64
-	if err := s.db.QueryRow(ctx, query, args...).Scan(&retID); err != nil {
+	if err := tx.QueryRow(ctx, query, args...).Scan(&retID); err != nil {
 		return nil, fmt.Errorf("vacancy not found or access denied")
 	}
+
+	if req.CategoryIDs != nil {
+		if err := s.replaceCategories(ctx, tx, retID, req.CategoryIDs); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+
 	return s.GetByID(ctx, retID)
 }
-
-// ─── Delete ──────────────────────────────────────────────────────────────────
 
 func (s *vacancyService) Delete(ctx context.Context, id, userID int64) error {
 	tag, err := s.db.Exec(ctx, `
@@ -211,8 +314,6 @@ func (s *vacancyService) Delete(ctx context.Context, id, userID int64) error {
 	}
 	return nil
 }
-
-// ─── List ────────────────────────────────────────────────────────────────────
 
 func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, cursor helper.CursorPayload, limit int) ([]*vacancy_dto.VacancyResponse, bool, int64, error) {
 	args := []interface{}{}
@@ -269,11 +370,32 @@ func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, 
 		args = append(args, *f.MaxPrice)
 		idx++
 	}
+	if f.CategoryID != nil {
+		conditions = append(conditions, fmt.Sprintf(`EXISTS (
+			SELECT 1 FROM category_vacancy cv
+			WHERE cv.vacancy_id = v.id AND cv.categorya_id = $%d
+		)`, idx))
+		args = append(args, *f.CategoryID)
+		idx++
+	}
+	if len(f.CategoryIDs) > 0 {
+		placeholders := make([]string, len(f.CategoryIDs))
+		for i, catID := range f.CategoryIDs {
+			placeholders[i] = fmt.Sprintf("$%d", idx)
+			args = append(args, catID)
+			idx++
+		}
+		conditions = append(conditions, fmt.Sprintf(`EXISTS (
+			SELECT 1 FROM category_vacancy cv
+			WHERE cv.vacancy_id = v.id AND cv.categorya_id IN (%s)
+		)`, strings.Join(placeholders, ",")))
+	}
 
-	// COUNT (filter shartlari bilan, cursor holda)
 	var total int64
 	countSQL := fmt.Sprintf(`SELECT COUNT(*) FROM vacancies v WHERE %s`, strings.Join(conditions, " AND "))
-	s.db.QueryRow(ctx, countSQL, args...).Scan(&total)
+	if err := s.db.QueryRow(ctx, countSQL, args...).Scan(&total); err != nil {
+		return nil, false, 0, err
+	}
 
 	orderCol, valueExpr, cursorFallback, valueKind := vacancyOrderConfig(f.SortBy, f.SortOrder)
 	orderDir := normalizedOrder(f.SortOrder)
@@ -317,6 +439,7 @@ func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, 
 		); err != nil {
 			return nil, false, 0, err
 		}
+		v.Categories = []vacancy_dto.CategoryShort{}
 		items = append(items, &v)
 	}
 	if err := rows.Err(); err != nil {
@@ -327,6 +450,36 @@ func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, 
 	if hasMore {
 		items = items[:limit]
 	}
+
+	if len(items) > 0 {
+		ids := make([]int64, len(items))
+		indexMap := make(map[int64]int, len(items))
+		for i, item := range items {
+			ids[i] = item.ID
+			indexMap[item.ID] = i
+		}
+
+		catRows, err := s.db.Query(ctx, `
+			SELECT cv.vacancy_id, c.id, c.name, c.is_active
+			FROM category_vacancy cv
+			JOIN categories c ON c.id = cv.categorya_id
+			WHERE cv.vacancy_id = ANY($1) AND c.deleted_at IS NULL
+			ORDER BY cv.vacancy_id, c.id
+		`, ids)
+		if err == nil {
+			defer catRows.Close()
+			for catRows.Next() {
+				var vacancyID int64
+				var cat vacancy_dto.CategoryShort
+				if err := catRows.Scan(&vacancyID, &cat.ID, &cat.Name, &cat.IsActive); err == nil {
+					if i, ok := indexMap[vacancyID]; ok {
+						items[i].Categories = append(items[i].Categories, cat)
+					}
+				}
+			}
+		}
+	}
+
 	return items, hasMore, total, nil
 }
 

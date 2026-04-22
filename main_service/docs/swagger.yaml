@@ -400,6 +400,10 @@ definitions:
         maxLength: 500
         minLength: 3
         type: string
+      category_ids:
+        items:
+          type: integer
+        type: array
       contact:
         maxLength: 255
         minLength: 5
@@ -430,6 +434,10 @@ definitions:
     properties:
       adress:
         type: string
+      categories:
+        items:
+          $ref: '#/definitions/resume_dto.CategoryShort'
+        type: array
       contact:
         type: string
       created_at:
@@ -1643,6 +1651,14 @@ paths:
         in: query
         name: mahalla_id
         type: integer
+      - description: Kategoriya ID
+        in: query
+        name: category_id
+        type: integer
+      - description: Kategoriya ID lar (vergul bilan)
+        in: query
+        name: category_ids
+        type: string
       - description: Faol/faolsiz
         in: query
         name: is_active

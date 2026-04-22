@@ -1817,6 +1817,18 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "integer",
+                        "description": "Kategoriya ID",
+                        "name": "category_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Kategoriya ID lar (vergul bilan)",
+                        "name": "category_ids",
+                        "in": "query"
+                    },
+                    {
                         "type": "boolean",
                         "description": "Faol/faolsiz",
                         "name": "is_active",
@@ -2601,6 +2613,12 @@ const docTemplate = `{
                     "maxLength": 500,
                     "minLength": 3
                 },
+                "category_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "contact": {
                     "type": "string",
                     "maxLength": 255,
@@ -2747,6 +2765,12 @@ const docTemplate = `{
             "properties": {
                 "adress": {
                     "type": "string"
+                },
+                "categories": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resume_dto.CategoryShort"
+                    }
                 },
                 "contact": {
                     "type": "string"

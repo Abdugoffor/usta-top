@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/modules/auth/store/authStore'
 import axios from '@/app/providers/axios'
+import { getCategories } from '@/modules/category/api/categoryApi'
 import { getCountries } from '@/modules/country/api/countryApi'
 import ClientHeader from '@/modules/client/components/ClientHeader.vue'
 
@@ -20,8 +21,10 @@ const form = ref({
   district_id: null,
   mahalla_id: null,
   is_active: true,
+  category_ids: [],
 })
 
+const categories = ref([])
 const regions = ref([])
 const districts = ref([])
 const mahallas = ref([])
@@ -52,6 +55,12 @@ const selectDistrict = async (val) => {
   }
 }
 
+const toggleCategory = (id) => {
+  const idx = form.value.category_ids.indexOf(id)
+  if (idx === -1) form.value.category_ids.push(id)
+  else form.value.category_ids.splice(idx, 1)
+}
+
 const submit = async () => {
   error.value = ''
   fieldErrors.value = {}
@@ -64,6 +73,7 @@ const submit = async () => {
       text: form.value.text,
       contact: form.value.contact,
       is_active: form.value.is_active,
+      category_ids: form.value.category_ids,
     }
     if (form.value.price) payload.price = Number(form.value.price)
     if (form.value.region_id) payload.region_id = form.value.region_id
@@ -82,10 +92,18 @@ const submit = async () => {
 }
 
 onMounted(async () => {
-  if (!auth.isLoggedIn) { router.push({ name: 'login' }); return }
-  // Viloyatlar — O'zbekistonning (id=196) to'g'ridan-to'g'ri bolalari
-  const res = await getCountries({ parent_id: 196, limit: 100 })
-  regions.value = res.data?.data || []
+  if (!auth.isLoggedIn) {
+    router.push({ name: 'login' })
+    return
+  }
+
+  const [catRes, regionRes] = await Promise.all([
+    getCategories({ limit: 50 }),
+    getCountries({ parent_id: 196, limit: 100 }),
+  ])
+
+  categories.value = catRes.data?.data || []
+  regions.value = regionRes.data?.data || []
 })
 </script>
 
@@ -111,8 +129,6 @@ onMounted(async () => {
         <div v-if="error" class="form-error-banner">{{ error }}</div>
 
         <form @submit.prevent="submit" class="create-form">
-
-          <!-- Asosiy ma'lumotlar -->
           <div class="form-section">
             <h3 class="form-section__title">
               <span class="form-section__num">1</span>
@@ -147,7 +163,6 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- Joylashuv -->
           <div class="form-section">
             <h3 class="form-section__title">
               <span class="form-section__num">2</span>
@@ -183,10 +198,28 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- Holat -->
-          <div class="form-section">
+          <div class="form-section" v-if="categories.length">
             <h3 class="form-section__title">
               <span class="form-section__num">3</span>
+              Kategoriyalar
+            </h3>
+            <div class="cat-chips">
+              <button
+                v-for="cat in categories"
+                :key="cat.id"
+                type="button"
+                class="cat-chip"
+                :class="{ 'cat-chip--active': form.category_ids.includes(cat.id) }"
+                @click="toggleCategory(cat.id)"
+              >
+                {{ cat.name }}
+              </button>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3 class="form-section__title">
+              <span class="form-section__num">{{ categories.length ? '4' : '3' }}</span>
               Holat
             </h3>
             <label class="toggle-row">
@@ -333,6 +366,30 @@ onMounted(async () => {
 .form-field--error textarea { border-color: #ef4444; }
 
 .form-field__err { font-size: 12px; color: #ef4444; font-weight: 500; }
+
+.cat-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.cat-chip {
+  padding: 8px 16px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  background: #f9fafb;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.cat-chip:hover { border-color: #93c5fd; background: #eff6ff; color: #1d4ed8; }
+
+.cat-chip--active {
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.3);
+}
 
 .toggle-row {
   display: flex;

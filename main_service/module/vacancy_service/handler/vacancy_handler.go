@@ -45,19 +45,15 @@ func NewVacancyHandler(router *httprouter.Router, group string, db *pgxpool.Pool
 // @Router       /vacancies [post]
 func (h *vacancyHandler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	userID := middleware.GetUserID(r)
-	{
-		if userID == 0 {
-			helper.WriteError(w, http.StatusUnauthorized, "unauthorized")
-			return
-		}
+	if userID == 0 {
+		helper.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
 	}
 
 	var req vacancy_dto.CreateVacancyRequest
-	{
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			helper.WriteError(w, http.StatusBadRequest, "invalid JSON")
-			return
-		}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		helper.WriteError(w, http.StatusBadRequest, "invalid JSON")
+		return
 	}
 
 	req.Name = strings.TrimSpace(req.Name)
@@ -70,11 +66,9 @@ func (h *vacancyHandler) Create(w http.ResponseWriter, r *http.Request, _ httpro
 	}
 
 	resp, err := h.service.Create(r.Context(), int64(userID), req)
-	{
-		if err != nil {
-			helper.WriteInternalError(w, err)
-			return
-		}
+	if err != nil {
+		helper.WriteInternalError(w, err)
+		return
 	}
 
 	helper.WriteJSON(w, http.StatusCreated, resp)
@@ -90,6 +84,8 @@ func (h *vacancyHandler) Create(w http.ResponseWriter, r *http.Request, _ httpro
 // @Param        region_id    query     integer false  "Region ID"
 // @Param        district_id  query     integer false  "Tuman ID"
 // @Param        mahalla_id   query     integer false  "Mahalla ID"
+// @Param        category_id  query     integer false  "Kategoriya ID"
+// @Param        category_ids query     string  false  "Kategoriya ID lar (vergul bilan)"
 // @Param        is_active    query     boolean false  "Faol/faolsiz"
 // @Param        min_price    query     integer false  "Minimal narx"
 // @Param        max_price    query     integer false  "Maksimal narx"
@@ -125,6 +121,14 @@ func (h *vacancyHandler) List(w http.ResponseWriter, r *http.Request, _ httprout
 		SortOrder: strings.TrimSpace(q.Get("sort_order")),
 	}
 
+	if catIDs := q.Get("category_ids"); catIDs != "" {
+		for _, s := range strings.Split(catIDs, ",") {
+			s = strings.TrimSpace(s)
+			if n, err := strconv.ParseInt(s, 10, 64); err == nil && n > 0 {
+				f.CategoryIDs = append(f.CategoryIDs, n)
+			}
+		}
+	}
 	if v := q.Get("user_id"); v != "" {
 		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
 			f.UserID = &n
@@ -143,6 +147,11 @@ func (h *vacancyHandler) List(w http.ResponseWriter, r *http.Request, _ httprout
 	if v := q.Get("mahalla_id"); v != "" {
 		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
 			f.MahallaID = &n
+		}
+	}
+	if v := q.Get("category_id"); v != "" {
+		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
+			f.CategoryID = &n
 		}
 	}
 	if v := q.Get("is_active"); v != "" {
@@ -193,19 +202,15 @@ func (h *vacancyHandler) List(w http.ResponseWriter, r *http.Request, _ httprout
 // @Router       /vacancies/{slug} [get]
 func (h *vacancyHandler) GetBySlug(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	slug := ps.ByName("slug")
-	{
-		if slug == "" {
-			helper.WriteError(w, http.StatusBadRequest, "invalid slug")
-			return
-		}
+	if slug == "" {
+		helper.WriteError(w, http.StatusBadRequest, "invalid slug")
+		return
 	}
 
 	resp, err := h.service.GetBySlug(r.Context(), slug)
-	{
-		if err != nil {
-			helper.WriteError(w, http.StatusNotFound, "vacancy not found")
-			return
-		}
+	if err != nil {
+		helper.WriteError(w, http.StatusNotFound, "vacancy not found")
+		return
 	}
 
 	helper.WriteJSON(w, http.StatusOK, resp)
@@ -226,27 +231,34 @@ func (h *vacancyHandler) GetBySlug(w http.ResponseWriter, r *http.Request, ps ht
 // @Router       /vacancies/{id} [put]
 func (h *vacancyHandler) Update(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	userID := middleware.GetUserID(r)
-	{
-		if userID == 0 {
-			helper.WriteError(w, http.StatusUnauthorized, "unauthorized")
-			return
-		}
+	if userID == 0 {
+		helper.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
 	}
 
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
-	{
-		if err != nil || id <= 0 {
-			helper.WriteError(w, http.StatusBadRequest, "invalid id")
-			return
-		}
+	if err != nil || id <= 0 {
+		helper.WriteError(w, http.StatusBadRequest, "invalid id")
+		return
 	}
 
 	var req vacancy_dto.UpdateVacancyRequest
-	{
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			helper.WriteError(w, http.StatusBadRequest, "invalid JSON")
-			return
-		}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		helper.WriteError(w, http.StatusBadRequest, "invalid JSON")
+		return
+	}
+
+	if req.Name != nil {
+		trimmed := strings.TrimSpace(*req.Name)
+		req.Name = &trimmed
+	}
+	if req.Title != nil {
+		trimmed := strings.TrimSpace(*req.Title)
+		req.Title = &trimmed
+	}
+	if req.Adress != nil {
+		trimmed := strings.TrimSpace(*req.Adress)
+		req.Adress = &trimmed
 	}
 
 	if errs := helper.ValidateStruct(req); errs != nil {
@@ -255,11 +267,9 @@ func (h *vacancyHandler) Update(w http.ResponseWriter, r *http.Request, ps httpr
 	}
 
 	resp, err := h.service.Update(r.Context(), id, int64(userID), req)
-	{
-		if err != nil {
-			helper.WriteError(w, http.StatusNotFound, err.Error())
-			return
-		}
+	if err != nil {
+		helper.WriteError(w, http.StatusNotFound, err.Error())
+		return
 	}
 
 	helper.WriteJSON(w, http.StatusOK, resp)
@@ -278,19 +288,15 @@ func (h *vacancyHandler) Update(w http.ResponseWriter, r *http.Request, ps httpr
 // @Router       /vacancies/{id} [delete]
 func (h *vacancyHandler) Delete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	userID := middleware.GetUserID(r)
-	{
-		if userID == 0 {
-			helper.WriteError(w, http.StatusUnauthorized, "unauthorized")
-			return
-		}
+	if userID == 0 {
+		helper.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
 	}
 
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
-	{
-		if err != nil || id <= 0 {
-			helper.WriteError(w, http.StatusBadRequest, "invalid id")
-			return
-		}
+	if err != nil || id <= 0 {
+		helper.WriteError(w, http.StatusBadRequest, "invalid id")
+		return
 	}
 
 	if err := h.service.Delete(r.Context(), id, int64(userID)); err != nil {

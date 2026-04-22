@@ -19,6 +19,7 @@ const sortOptions = [
 const syncToUrl = ({ filters, sortBy, router }) => {
   const q = {}
   if (filters.search) q.search = filters.search
+  if (filters.category_ids?.length) q.category_ids = filters.category_ids.join(',')
   if (filters.region_id) q.region_id = filters.region_id
   if (filters.district_id) q.district_id = filters.district_id
   if (filters.mahalla_id) q.mahalla_id = filters.mahalla_id
@@ -34,6 +35,7 @@ const loadFromUrl = ({ query, filters, search, sortBy }) => {
     filters.search = query.search
     search.value = query.search
   }
+  if (query.category_ids) filters.category_ids = query.category_ids.split(',').map(Number).filter(Boolean)
   if (query.region_id) filters.region_id = query.region_id
   if (query.district_id) filters.district_id = query.district_id
   if (query.mahalla_id) filters.mahalla_id = query.mahalla_id
@@ -47,6 +49,7 @@ const buildParams = ({ filters, sortBy, cursor }) => {
   const params = { limit: 9 }
   if (cursor) params.cursor = cursor
   if (filters.search) params.search = filters.search
+  if (filters.category_ids?.length) params.category_ids = filters.category_ids.join(',')
   if (filters.region_id) params.region_id = filters.region_id
   if (filters.district_id) params.district_id = filters.district_id
   if (filters.mahalla_id) params.mahalla_id = filters.mahalla_id
@@ -99,6 +102,7 @@ const {
   loadFromUrl,
   countActiveFilters: (filters) => {
     let count = 0
+    if (filters.category_ids?.length) count++
     if (filters.region_id) count++
     if (filters.min_price || filters.max_price) count++
     if (filters.is_active_filter) count++
@@ -158,7 +162,6 @@ const {
         <div class="client-sidebar">
           <FilterSidebar
             :model-value="filters"
-            :show-categories="false"
             :mobile-open="mobileFilterOpen"
             @update:model-value="Object.assign(filters, $event)"
             @apply="applyFilters"
