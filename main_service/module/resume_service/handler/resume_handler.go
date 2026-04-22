@@ -181,7 +181,7 @@ func (h *resumeHandler) List(w http.ResponseWriter, r *http.Request, _ httproute
 		}
 	}
 
-	items, hasMore, err := h.service.List(r.Context(), f, afterID, limit)
+	items, hasMore, total, err := h.service.List(r.Context(), f, afterID, limit)
 	if err != nil {
 		helper.WriteInternalError(w, err)
 		return
@@ -194,7 +194,7 @@ func (h *resumeHandler) List(w http.ResponseWriter, r *http.Request, _ httproute
 
 	helper.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"data": items,
-		"meta": helper.NewCursorMeta(limit, hasMore, lastID),
+		"meta": helper.NewCursorMeta(limit, hasMore, lastID, total),
 	})
 }
 

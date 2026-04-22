@@ -7,6 +7,7 @@ import (
 )
 
 type CursorMeta struct {
+	Total      int64  `json:"total"`
 	Limit      int    `json:"limit"`
 	NextCursor string `json:"next_cursor,omitempty"`
 	HasMore    bool   `json:"has_more"`
@@ -42,8 +43,8 @@ func ParseCursorPage(r *http.Request) (afterID int64, limit int) {
 	return
 }
 
-func NewCursorMeta(limit int, hasMore bool, lastID int64) CursorMeta {
-	meta := CursorMeta{Limit: limit, HasMore: hasMore}
+func NewCursorMeta(limit int, hasMore bool, lastID int64, total int64) CursorMeta {
+	meta := CursorMeta{Total: total, Limit: limit, HasMore: hasMore}
 	if hasMore {
 		meta.NextCursor = EncodeCursor(lastID)
 	}

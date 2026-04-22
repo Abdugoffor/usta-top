@@ -121,7 +121,7 @@ func (h *countryHandler) List(w http.ResponseWriter, r *http.Request, _ httprout
 
 	helper.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"data": items,
-		"meta": helper.NewCursorMeta(limit, hasMore, lastID),
+		"meta": helper.NewCursorMeta(limit, hasMore, lastID, 0),
 	})
 }
 

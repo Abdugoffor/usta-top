@@ -159,7 +159,7 @@ func (h *vacancyHandler) List(w http.ResponseWriter, r *http.Request, _ httprout
 		}
 	}
 
-	items, hasMore, err := h.service.List(r.Context(), f, afterID, limit)
+	items, hasMore, total, err := h.service.List(r.Context(), f, afterID, limit)
 	if err != nil {
 		helper.WriteInternalError(w, err)
 		return
@@ -172,7 +172,7 @@ func (h *vacancyHandler) List(w http.ResponseWriter, r *http.Request, _ httprout
 
 	helper.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"data": items,
-		"meta": helper.NewCursorMeta(limit, hasMore, lastID),
+		"meta": helper.NewCursorMeta(limit, hasMore, lastID, total),
 	})
 }
 

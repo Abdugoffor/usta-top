@@ -19,7 +19,7 @@ type ResumeService interface {
 	GetBySlug(ctx context.Context, slug string) (*resume_dto.ResumeResponse, error)
 	Update(ctx context.Context, id, userID int64, req resume_dto.UpdateResumeRequest) (*resume_dto.ResumeResponse, error)
 	Delete(ctx context.Context, id, userID int64) error
-	List(ctx context.Context, f resume_dto.ResumeFilter, afterID int64, limit int) ([]*resume_dto.ResumeResponse, bool, error)
+	List(ctx context.Context, f resume_dto.ResumeFilter, afterID int64, limit int) ([]*resume_dto.ResumeResponse, bool, int64, error)
 	AddCategory(ctx context.Context, resumeID, categoryID int64) error
 	RemoveCategory(ctx context.Context, resumeID, categoryID int64) error
 }
@@ -259,16 +259,11 @@ func (s *resumeService) RemoveCategory(ctx context.Context, resumeID, categoryID
 
 // ─── List ────────────────────────────────────────────────────────────────────
 
-func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, afterID int64, limit int) ([]*resume_dto.ResumeResponse, bool, error) {
+func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, afterID int64, limit int) ([]*resume_dto.ResumeResponse, bool, int64, error) {
 	args := []interface{}{}
 	conditions := []string{"rs.deleted_at IS NULL"}
 	idx := 1
 
-	if afterID > 0 {
-		conditions = append(conditions, fmt.Sprintf("rs.id < $%d", idx))
-		args = append(args, afterID)
-		idx++
-	}
 	if f.UserID != nil {
 		conditions = append(conditions, fmt.Sprintf("rs.user_id = $%d", idx))
 		args = append(args, *f.UserID)
@@ -345,6 +340,18 @@ func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, aft
 		)`, strings.Join(placeholders, ",")))
 	}
 
+	// COUNT (filter shartlari bilan, cursor holda)
+	var total int64
+	countSQL := fmt.Sprintf(`SELECT COUNT(*) FROM resumes rs WHERE %s`, strings.Join(conditions, " AND "))
+	s.db.QueryRow(ctx, countSQL, args...).Scan(&total)
+
+	// Cursor shartini faqat asosiy so'rovga qo'shamiz
+	if afterID > 0 {
+		conditions = append(conditions, fmt.Sprintf("rs.id < $%d", idx))
+		args = append(args, afterID)
+		idx++
+	}
+
 	args = append(args, limit+1)
 	query := fmt.Sprintf(`
 		SELECT rs.id, rs.slug, rs.user_id,
@@ -366,7 +373,7 @@ func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, aft
 
 	rows, err := s.db.Query(ctx, query, args...)
 	if err != nil {
-		return nil, false, err
+		return nil, false, 0, err
 	}
 	defer rows.Close()
 
@@ -383,13 +390,13 @@ func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, aft
 			&rs.ViewsCount, &rs.IsActive,
 			&rs.CreatedAt, &rs.UpdatedAt, &rs.DeletedAt,
 		); err != nil {
-			return nil, false, err
+			return nil, false, 0, err
 		}
 		rs.Categories = []resume_dto.CategoryShort{}
 		items = append(items, &rs)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, false, err
+		return nil, false, 0, err
 	}
 
 	hasMore := len(items) > limit
@@ -425,7 +432,7 @@ func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, aft
 		}
 	}
 
-	return items, hasMore, nil
+	return items, hasMore, total, nil
 }
 
 // ─── pointer helpers ─────────────────────────────────────────────────────────

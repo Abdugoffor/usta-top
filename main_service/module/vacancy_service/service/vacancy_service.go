@@ -19,7 +19,7 @@ type VacancyService interface {
 	GetBySlug(ctx context.Context, slug string) (*vacancy_dto.VacancyResponse, error)
 	Update(ctx context.Context, id, userID int64, req vacancy_dto.UpdateVacancyRequest) (*vacancy_dto.VacancyResponse, error)
 	Delete(ctx context.Context, id, userID int64) error
-	List(ctx context.Context, f vacancy_dto.VacancyFilter, afterID int64, limit int) ([]*vacancy_dto.VacancyResponse, bool, error)
+	List(ctx context.Context, f vacancy_dto.VacancyFilter, afterID int64, limit int) ([]*vacancy_dto.VacancyResponse, bool, int64, error)
 }
 
 // ─── Implementation ──────────────────────────────────────────────────────────
@@ -209,16 +209,11 @@ func (s *vacancyService) Delete(ctx context.Context, id, userID int64) error {
 
 // ─── List ────────────────────────────────────────────────────────────────────
 
-func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, afterID int64, limit int) ([]*vacancy_dto.VacancyResponse, bool, error) {
+func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, afterID int64, limit int) ([]*vacancy_dto.VacancyResponse, bool, int64, error) {
 	args := []interface{}{}
 	conditions := []string{"v.deleted_at IS NULL"}
 	idx := 1
 
-	if afterID > 0 {
-		conditions = append(conditions, fmt.Sprintf("v.id < $%d", idx))
-		args = append(args, afterID)
-		idx++
-	}
 	if f.UserID != nil {
 		conditions = append(conditions, fmt.Sprintf("v.user_id = $%d", idx))
 		args = append(args, *f.UserID)
@@ -270,6 +265,18 @@ func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, 
 		idx++
 	}
 
+	// COUNT (filter shartlari bilan, cursor holda)
+	var total int64
+	countSQL := fmt.Sprintf(`SELECT COUNT(*) FROM vacancies v WHERE %s`, strings.Join(conditions, " AND "))
+	s.db.QueryRow(ctx, countSQL, args...).Scan(&total)
+
+	// Cursor shartini faqat asosiy so'rovga qo'shamiz
+	if afterID > 0 {
+		conditions = append(conditions, fmt.Sprintf("v.id < $%d", idx))
+		args = append(args, afterID)
+		idx++
+	}
+
 	args = append(args, limit+1)
 	query := fmt.Sprintf(`
 		SELECT v.id, v.slug, v.user_id,
@@ -290,7 +297,7 @@ func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, 
 
 	rows, err := s.db.Query(ctx, query, args...)
 	if err != nil {
-		return nil, false, err
+		return nil, false, 0, err
 	}
 	defer rows.Close()
 
@@ -306,17 +313,17 @@ func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, 
 			&v.Price, &v.ViewsCount, &v.IsActive,
 			&v.CreatedAt, &v.UpdatedAt, &v.DeletedAt,
 		); err != nil {
-			return nil, false, err
+			return nil, false, 0, err
 		}
 		items = append(items, &v)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, false, err
+		return nil, false, 0, err
 	}
 
 	hasMore := len(items) > limit
 	if hasMore {
 		items = items[:limit]
 	}
-	return items, hasMore, nil
+	return items, hasMore, total, nil
 }

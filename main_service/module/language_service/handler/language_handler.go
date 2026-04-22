@@ -113,7 +113,7 @@ func (h *languageHandler) List(w http.ResponseWriter, r *http.Request, _ httprou
 
 	helper.WriteJSON(w, http.StatusOK, map[string]any{
 		"data": items,
-		"meta": helper.NewCursorMeta(limit, hasMore, lastID),
+		"meta": helper.NewCursorMeta(limit, hasMore, lastID, 0),
 	})
 }
 
