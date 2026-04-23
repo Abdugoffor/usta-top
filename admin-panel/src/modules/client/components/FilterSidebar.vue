@@ -1,8 +1,9 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
-import { getCategories } from '@/modules/category/api/categoryApi'
+import { getActiveCategories } from '@/modules/category/api/categoryApi'
 import { getCountries } from '@/modules/country/api/countryApi'
 import { useI18n } from '@/shared/composables/useI18n'
+import { useLangStore } from '@/shared/stores/langStore'
 
 const props = defineProps({
   modelValue: { type: Object, required: true },
@@ -12,12 +13,12 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'apply', 'close'])
 
 const { t, langName } = useI18n()
+const langStore = useLangStore()
 
 const categories = ref([])
 const regions = ref([])
 const districts = ref([])
 const mahallas = ref([])
-const priceOpen = ref(!!(props.modelValue.min_price || props.modelValue.max_price))
 const regionRequestVersion = ref(0)
 const districtRequestVersion = ref(0)
 
@@ -78,12 +79,6 @@ const resetAll = () => {
 
 const applyAndClose = () => { emit('apply'); emit('close') }
 
-watch(
-  () => !!(props.modelValue.min_price || props.modelValue.max_price),
-  (hasPrice) => { if (hasPrice) priceOpen.value = true },
-  { immediate: true }
-)
-
 watch(() => props.modelValue.region_id, async (regionId) => {
   const version = ++regionRequestVersion.value
   districts.value = []
@@ -115,7 +110,7 @@ watch(() => props.modelValue.district_id, async (districtId) => {
 
 onMounted(async () => {
   const requests = [getCountries({ limit: 100 })]
-  if (props.showCategories) requests.unshift(getCategories({ limit: 50 }))
+  if (props.showCategories) requests.unshift(getActiveCategories(langStore.currentLang))
 
   const responses = await Promise.all(requests)
   const categoryResponse = props.showCategories ? responses[0] : null
@@ -236,14 +231,11 @@ onMounted(async () => {
 
       <!-- Narx -->
       <div class="filter-sidebar__section">
-        <button class="filter-sidebar__section-title filter-sidebar__section-title--btn" @click="priceOpen = !priceOpen">
+        <div class="filter-sidebar__section-title">
           <span>{{ t('filter_price') }}</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" :style="{ transform: priceOpen ? 'rotate(0)' : 'rotate(180deg)', transition: 'transform 0.2s' }">
-            <path d="m18 15-6-6-6 6" />
-          </svg>
-        </button>
+        </div>
 
-        <div v-if="priceOpen" class="filter-sidebar__price">
+        <div class="filter-sidebar__price">
           <div class="filter-sidebar__price-row">
             <input class="filter-sidebar__price-input" type="number" :placeholder="t('filter_price_min')" :value="modelValue.min_price" @input="update('min_price', $event.target.value)" />
             <span class="filter-sidebar__price-sep">—</span>

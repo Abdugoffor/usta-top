@@ -3,13 +3,15 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/modules/auth/store/authStore'
 import axios from '@/app/providers/axios'
-import { getCategories } from '@/modules/category/api/categoryApi'
+import { getActiveCategories } from '@/modules/category/api/categoryApi'
 import { getCountries } from '@/modules/country/api/countryApi'
 import ClientHeader from '@/modules/client/components/ClientHeader.vue'
+import { useLangStore } from '@/shared/stores/langStore'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+const langStore = useLangStore()
 
 const form = ref({
   name: '',
@@ -125,7 +127,7 @@ onMounted(async () => {
   if (!auth.isLoggedIn) { router.push({ name: 'login' }); return }
   // Viloyatlar — O'zbekistonning (id=196) to'g'ridan-to'g'ri bolalari
   const [catRes, regRes] = await Promise.all([
-    getCategories({ limit: 50 }),
+    getActiveCategories(langStore.currentLang),
     getCountries({ parent_id: 196, limit: 100 }),
   ])
   categories.value = catRes.data?.data || []

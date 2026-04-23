@@ -28,6 +28,8 @@ func NewCategoryHandler(router *httprouter.Router, group string, db *pgxpool.Poo
 		router.PUT(routes+"/:id", middleware.CheckRole(h.Update))
 		router.DELETE(routes+"/:id", middleware.CheckRole(h.Delete))
 	}
+
+	router.GET(group+"/active-categories", h.ListActive)
 }
 
 // Create godoc
@@ -104,6 +106,29 @@ func (h *categoryHandler) List(w http.ResponseWriter, r *http.Request, _ httprou
 	helper.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"data": items,
 		"meta": helper.NewCursorMeta(limit, hasMore, lastID, 0),
+	})
+}
+
+// ListActive godoc
+// @Summary      Faol kategoriyalar (tilga qarab)
+// @Description  Faol kategoriyalarni berilgan tilda qaytaradi. Agar o'sha tilda nom bo'lmasa, default qiymati qaytariladi.
+// @Tags         Categories
+// @Produce      json
+// @Param        lang  query     string  false  "Til kodi (uz, ru, en ...). Default: default"
+// @Success      200   {object}  map[string]interface{}
+// @Failure      500   {object}  map[string]string
+// @Router       /active-categories [get]
+func (h *categoryHandler) ListActive(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	lang := r.URL.Query().Get("lang")
+
+	items, err := h.service.ListActive(r.Context(), lang)
+	if err != nil {
+		helper.WriteInternalError(w, err)
+		return
+	}
+
+	helper.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"data": items,
 	})
 }
 

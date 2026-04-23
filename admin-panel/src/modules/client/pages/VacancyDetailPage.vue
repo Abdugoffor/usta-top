@@ -41,7 +41,12 @@ const timeAgo = computed(() => {
 const pageUrl = computed(() => `${window.location.origin}/vacancies/${route.params.slug}`)
 
 const goBack = () => {
-  router.push({ name: 'vacancies', query: { ...route.query } })
+  if (route.query.from === 'profile') {
+    router.push({ name: 'profile', params: { lang: route.params.lang } })
+    return
+  }
+  const { from, ...rest } = route.query
+  router.push({ name: 'vacancies', query: rest })
 }
 
 onMounted(async () => {

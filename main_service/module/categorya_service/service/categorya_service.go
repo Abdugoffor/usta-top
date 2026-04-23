@@ -19,6 +19,7 @@ type CategoryService interface {
 	Update(ctx context.Context, id int64, req categorya_dto.UpdateCategoryRequest) (*categorya_dto.CategoryResponse, error)
 	Delete(ctx context.Context, id int64) error
 	List(ctx context.Context, f categorya_dto.CategoryFilter, afterID int64, limit int) ([]*categorya_dto.CategoryResponse, bool, error)
+	ListActive(ctx context.Context, lang string) ([]*categorya_dto.ActiveCategoryResponse, error)
 }
 
 // ─── Implementation ──────────────────────────────────────────────────────────
@@ -205,6 +206,39 @@ func (s *categoryService) Delete(ctx context.Context, id int64) error {
 		return fmt.Errorf("category not found")
 	}
 	return nil
+}
+
+// ─── ListActive ──────────────────────────────────────────────────────────────
+
+func (s *categoryService) ListActive(ctx context.Context, lang string) ([]*categorya_dto.ActiveCategoryResponse, error) {
+	lang = strings.TrimSpace(strings.ToLower(lang))
+	if lang == "" {
+		lang = "default"
+	}
+
+	rows, err := s.db.Query(ctx, `
+		SELECT id, COALESCE(NULLIF(name->>$1, ''), name->>'default', '') AS name
+		FROM categories
+		WHERE is_active = true AND deleted_at IS NULL
+		ORDER BY id DESC
+	`, lang)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := make([]*categorya_dto.ActiveCategoryResponse, 0)
+	for rows.Next() {
+		var r categorya_dto.ActiveCategoryResponse
+		if err := rows.Scan(&r.ID, &r.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, &r)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 // ─── List ────────────────────────────────────────────────────────────────────

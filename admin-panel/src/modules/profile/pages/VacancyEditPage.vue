@@ -2,14 +2,16 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/modules/auth/store/authStore'
-import { getCategories } from '@/modules/category/api/categoryApi'
+import { getActiveCategories } from '@/modules/category/api/categoryApi'
 import { getVacancy, updateVacancy } from '@/modules/client/api/vacancyApi'
 import { getCountries } from '@/modules/country/api/countryApi'
 import ClientHeader from '@/modules/client/components/ClientHeader.vue'
+import { useLangStore } from '@/shared/stores/langStore'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+const langStore = useLangStore()
 
 const vacancyId = ref(null)
 const form = ref({
@@ -102,7 +104,7 @@ onMounted(async () => {
     const slug = route.params.id
     const [vacRes, catRes, regRes] = await Promise.all([
       getVacancy(slug),
-      getCategories({ limit: 50 }),
+      getActiveCategories(langStore.currentLang),
       getCountries({ parent_id: 196, limit: 100 }),
     ])
     const v = vacRes.data

@@ -98,6 +98,15 @@ export function useClientListingPage({
     resetAndFetch()
   }
 
+  const resetFilters = () => {
+    clearTimeout(searchTimer)
+    Object.assign(filters, createFilters())
+    search.value = ''
+    sortBy.value = defaultSort
+    updateUrl()
+    resetAndFetch()
+  }
+
   const onSortChange = () => {
     updateUrl()
     resetAndFetch()
@@ -116,6 +125,12 @@ export function useClientListingPage({
 
   watch(search, (value) => {
     clearTimeout(searchTimer)
+    if (value === '') {
+      filters.search = ''
+      updateUrl()
+      resetAndFetch()
+      return
+    }
     searchTimer = setTimeout(() => {
       filters.search = value
       updateUrl()
@@ -153,6 +168,7 @@ export function useClientListingPage({
     mobileFilterOpen,
     onSortChange,
     remaining,
+    resetFilters,
     search,
     secondaryTotal,
     sortBy,

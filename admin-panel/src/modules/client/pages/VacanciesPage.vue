@@ -82,6 +82,7 @@ const {
   loadingMore,
   mobileFilterOpen,
   onSortChange,
+  resetFilters,
   search,
   secondaryTotal: totalMasters,
   sortBy,
@@ -117,7 +118,7 @@ const {
 
 <template>
   <div class="client-page client-page--vacancies">
-    <ClientHeader v-model="search" @search="applyFilters" />
+    <ClientHeader v-model="search" @search="applyFilters" @brand-click="resetFilters" />
 
     <section class="client-hero">
       <div class="client-hero__inner">

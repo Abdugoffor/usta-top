@@ -7,7 +7,7 @@ import { useI18n } from '@/shared/composables/useI18n'
 const props = defineProps({
   modelValue: { type: String, default: '' }
 })
-const emit = defineEmits(['update:modelValue', 'search'])
+const emit = defineEmits(['update:modelValue', 'search', 'brand-click'])
 
 const router = useRouter()
 const route = useRoute()
@@ -19,6 +19,8 @@ const userMenuOpen = ref(false)
 
 const onInput   = (e) => emit('update:modelValue', e.target.value)
 const onKeydown = (e) => { if (e.key === 'Enter') emit('search') }
+const clearSearch = () => { emit('update:modelValue', '') }
+const onBrandClick = () => { emit('brand-click'); mobileMenuOpen.value = false }
 
 const doLogout = () => {
   auth.logout()
@@ -37,7 +39,7 @@ const changeLang = (e) => {
 <template>
   <header class="site-header">
     <div class="site-header__inner">
-      <RouterLink :to="`/${lang}`" class="site-header__brand">
+      <RouterLink :to="`/${lang}`" class="site-header__brand" @click="onBrandClick">
         <div class="site-header__logo">UT</div>
         <span class="site-header__name">Usta<strong>Top</strong></span>
       </RouterLink>
@@ -54,6 +56,11 @@ const changeLang = (e) => {
           @input="onInput"
           @keydown="onKeydown"
         />
+        <button v-if="modelValue" type="button" class="site-header__search-clear" @click="clearSearch" :aria-label="t('filter_reset')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M18 6 6 18M6 6l12 12"/>
+          </svg>
+        </button>
       </div>
 
       <nav class="site-header__nav">
@@ -152,6 +159,11 @@ const changeLang = (e) => {
           @input="onInput"
           @keydown="onKeydown"
         />
+        <button v-if="modelValue" type="button" class="site-header__search-clear" @click="clearSearch" :aria-label="t('filter_reset')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M18 6 6 18M6 6l12 12"/>
+          </svg>
+        </button>
       </div>
 
       <!-- Mobil til tanlash -->
@@ -229,9 +241,27 @@ const changeLang = (e) => {
 
 .site-header__search { flex: 1; max-width: 480px; position: relative; display: flex; align-items: center; }
 .site-header__search-icon { position: absolute; left: 14px; width: 18px; height: 18px; color: #9ca3af; pointer-events: none; }
-.site-header__search-input { width: 100%; padding: 10px 16px 10px 42px; border: 1.5px solid #e5e7eb; border-radius: 10px; font-size: 14px; color: #111827; background: #f9fafb; outline: none; transition: all 0.2s; font-family: inherit; }
+.site-header__search-input { width: 100%; padding: 10px 40px 10px 42px; border: 1.5px solid #e5e7eb; border-radius: 10px; font-size: 14px; color: #111827; background: #f9fafb; outline: none; transition: all 0.2s; font-family: inherit; }
 .site-header__search-input:focus { border-color: #2563eb; background: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
 .site-header__search-input::placeholder { color: #9ca3af; }
+.site-header__search-clear {
+  position: absolute;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.15s;
+  padding: 0;
+}
+.site-header__search-clear:hover { background: #f3f4f6; color: #111827; }
+.site-header__search-clear svg { width: 16px; height: 16px; }
 
 .site-header__nav { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 .site-header__nav-link { padding: 8px 14px; border-radius: 8px; font-size: 14px; font-weight: 500; color: #4b5563; text-decoration: none; transition: all 0.2s; }
