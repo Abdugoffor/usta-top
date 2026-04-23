@@ -123,6 +123,9 @@ func (h *vacancyHandler) List(w http.ResponseWriter, r *http.Request, _ httprout
 
 	if catIDs := q.Get("category_ids"); catIDs != "" {
 		for _, s := range strings.Split(catIDs, ",") {
+			if len(f.CategoryIDs) >= 20 {
+				break
+			}
 			s = strings.TrimSpace(s)
 			if n, err := strconv.ParseInt(s, 10, 64); err == nil && n > 0 {
 				f.CategoryIDs = append(f.CategoryIDs, n)

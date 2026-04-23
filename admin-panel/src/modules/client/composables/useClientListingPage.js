@@ -11,7 +11,7 @@ export function useClientListingPage({
   syncToUrl,
   loadFromUrl,
   countActiveFilters,
-  searchDelay = 450,
+  searchDelay = 600,
 }) {
   const search = ref('')
   const loading = ref(false)

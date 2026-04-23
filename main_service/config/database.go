@@ -37,11 +37,11 @@ func DBConnect() *pgxpool.Pool {
 		log.Fatal("❌ DSN parse error:", err)
 	}
 
-	// 🔥 Pool settings (MUHIM)
-	config.MaxConns = 20
-	config.MinConns = 5
+	config.MaxConns = 50
+	config.MinConns = 10
 	config.MaxConnLifetime = time.Hour
 	config.MaxConnIdleTime = 30 * time.Minute
+	config.HealthCheckPeriod = time.Minute
 
 	db, err := pgxpool.NewWithConfig(ctx, config)
 	{

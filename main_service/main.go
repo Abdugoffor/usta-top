@@ -45,6 +45,10 @@ import (
 func main() {
 	helper.LoadEnv()
 
+	if helper.ENV("JWT_KEY") == "" {
+		log.Fatal("❌ JWT_KEY environment variable is required and must not be empty")
+	}
+
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
 		case "migrate:create":
@@ -84,9 +88,11 @@ func main() {
 	}
 
 	// 4 MB body limit (3MB upload + overhead), 30 req/s per IP with burst 60
-	handler := middleware.CORS(
-		middleware.RateLimit(30, 60)(
-			http.MaxBytesHandler(router, 4<<20),
+	handler := middleware.SecurityHeaders(
+		middleware.CORS(
+			middleware.RateLimit(30, 60)(
+				http.MaxBytesHandler(router, 4<<20),
+			),
 		),
 	)
 

@@ -4,6 +4,7 @@ import (
 	"main_service/helper"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -18,6 +19,24 @@ var (
 	buckets   sync.Map
 	cleanOnce sync.Once
 )
+
+// realIP extracts the real client IP, respecting X-Real-IP and X-Forwarded-For when behind a proxy.
+func realIP(r *http.Request) string {
+	if ip := r.Header.Get("X-Real-IP"); ip != "" {
+		return strings.TrimSpace(ip)
+	}
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		if idx := strings.Index(xff, ","); idx != -1 {
+			return strings.TrimSpace(xff[:idx])
+		}
+		return strings.TrimSpace(xff)
+	}
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return ip
+}
 
 // RateLimit returns a middleware that allows at most `rps` requests per second per IP.
 // Burst allows short spikes up to `burst` requests.
@@ -42,10 +61,7 @@ func RateLimit(rps float64, burst float64) func(http.Handler) http.Handler {
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ip, _, err := net.SplitHostPort(r.RemoteAddr)
-			if err != nil {
-				ip = r.RemoteAddr
-			}
+			ip := realIP(r)
 
 			val, _ := buckets.LoadOrStore(ip, &rateBucket{tokens: burst, lastSeen: time.Now()})
 			b := val.(*rateBucket)

@@ -7,6 +7,7 @@ import (
 	vacancy_dto "main_service/module/vacancy_service/dto"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -315,6 +316,14 @@ func (s *vacancyService) Delete(ctx context.Context, id, userID int64) error {
 	return nil
 }
 
+// escapeLike escapes ILIKE special characters to prevent wildcard injection.
+func escapeLike(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `%`, `\%`)
+	s = strings.ReplaceAll(s, `_`, `\_`)
+	return s
+}
+
 func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, cursor helper.CursorPayload, limit int) ([]*vacancy_dto.VacancyResponse, bool, int64, error) {
 	args := []interface{}{}
 	conditions := []string{"v.deleted_at IS NULL"}
@@ -342,17 +351,20 @@ func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, 
 	}
 	if f.Name != "" {
 		conditions = append(conditions, fmt.Sprintf("v.name ILIKE $%d", idx))
-		args = append(args, "%"+f.Name+"%")
+		args = append(args, "%"+escapeLike(f.Name)+"%")
 		idx++
 	}
 	if f.Title != "" {
 		conditions = append(conditions, fmt.Sprintf("v.title ILIKE $%d", idx))
-		args = append(args, "%"+f.Title+"%")
+		args = append(args, "%"+escapeLike(f.Title)+"%")
 		idx++
 	}
 	if f.Search != "" {
-		conditions = append(conditions, fmt.Sprintf("(v.name ILIKE $%d OR v.title ILIKE $%d OR v.text ILIKE $%d)", idx, idx, idx))
-		args = append(args, "%"+f.Search+"%")
+		conditions = append(conditions, fmt.Sprintf(
+			"(v.name ILIKE $%d OR v.title ILIKE $%d OR v.text ILIKE $%d)",
+			idx, idx, idx,
+		))
+		args = append(args, "%"+escapeLike(f.Search)+"%")
 		idx++
 	}
 	if f.IsActive != nil {
@@ -379,23 +391,19 @@ func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, 
 		idx++
 	}
 	if len(f.CategoryIDs) > 0 {
-		placeholders := make([]string, len(f.CategoryIDs))
-		for i, catID := range f.CategoryIDs {
-			placeholders[i] = fmt.Sprintf("$%d", idx)
-			args = append(args, catID)
-			idx++
-		}
 		conditions = append(conditions, fmt.Sprintf(`EXISTS (
 			SELECT 1 FROM category_vacancy cv
-			WHERE cv.vacancy_id = v.id AND cv.categorya_id IN (%s)
-		)`, strings.Join(placeholders, ",")))
+			WHERE cv.vacancy_id = v.id AND cv.categorya_id = ANY($%d)
+		)`, idx))
+		args = append(args, f.CategoryIDs)
+		idx++
 	}
 
-	var total int64
-	countSQL := fmt.Sprintf(`SELECT COUNT(*) FROM vacancies v WHERE %s`, strings.Join(conditions, " AND "))
-	if err := s.db.QueryRow(ctx, countSQL, args...).Scan(&total); err != nil {
-		return nil, false, 0, err
-	}
+	// Snapshot for COUNT before adding cursor conditions
+	countConditions := make([]string, len(conditions))
+	copy(countConditions, conditions)
+	countArgs := make([]interface{}, len(args))
+	copy(countArgs, args)
 
 	orderCol, valueExpr, cursorFallback, valueKind := vacancyOrderConfig(f.SortBy, f.SortOrder)
 	orderDir := normalizedOrder(f.SortOrder)
@@ -419,8 +427,22 @@ func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, 
 		LIMIT $%d
 	`, strings.Join(conditions, " AND "), orderCol, orderDir, orderDir, idx)
 
+	// Run COUNT and data query in parallel
+	var (
+		total    int64
+		totalErr error
+		wg       sync.WaitGroup
+	)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		countSQL := fmt.Sprintf(`SELECT COUNT(*) FROM vacancies v WHERE %s`, strings.Join(countConditions, " AND "))
+		totalErr = s.db.QueryRow(ctx, countSQL, countArgs...).Scan(&total)
+	}()
+
 	rows, err := s.db.Query(ctx, query, args...)
 	if err != nil {
+		wg.Wait()
 		return nil, false, 0, err
 	}
 	defer rows.Close()
@@ -437,13 +459,20 @@ func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, 
 			&v.Price, &v.ViewsCount, &v.IsActive,
 			&v.CreatedAt, &v.UpdatedAt, &v.DeletedAt,
 		); err != nil {
+			wg.Wait()
 			return nil, false, 0, err
 		}
 		v.Categories = []vacancy_dto.CategoryShort{}
 		items = append(items, &v)
 	}
 	if err := rows.Err(); err != nil {
+		wg.Wait()
 		return nil, false, 0, err
+	}
+
+	wg.Wait()
+	if totalErr != nil {
+		return nil, false, 0, totalErr
 	}
 
 	hasMore := len(items) > limit

@@ -7,6 +7,7 @@ import (
 	resume_dto "main_service/module/resume_service/dto"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -262,6 +263,14 @@ func (s *resumeService) RemoveCategory(ctx context.Context, resumeID, categoryID
 	return nil
 }
 
+// escapeLike escapes ILIKE special characters to prevent wildcard injection.
+func escapeLike(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `%`, `\%`)
+	s = strings.ReplaceAll(s, `_`, `\_`)
+	return s
+}
+
 // ─── List ────────────────────────────────────────────────────────────────────
 
 func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, cursor helper.CursorPayload, limit int) ([]*resume_dto.ResumeResponse, bool, int64, error) {
@@ -291,17 +300,20 @@ func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, cur
 	}
 	if f.Name != "" {
 		conditions = append(conditions, fmt.Sprintf("rs.name ILIKE $%d", idx))
-		args = append(args, "%"+f.Name+"%")
+		args = append(args, "%"+escapeLike(f.Name)+"%")
 		idx++
 	}
 	if f.Title != "" {
 		conditions = append(conditions, fmt.Sprintf("rs.title ILIKE $%d", idx))
-		args = append(args, "%"+f.Title+"%")
+		args = append(args, "%"+escapeLike(f.Title)+"%")
 		idx++
 	}
 	if f.Search != "" {
-		conditions = append(conditions, fmt.Sprintf("(rs.name ILIKE $%d OR rs.title ILIKE $%d OR rs.skills ILIKE $%d OR rs.text ILIKE $%d)", idx, idx, idx, idx))
-		args = append(args, "%"+f.Search+"%")
+		conditions = append(conditions, fmt.Sprintf(
+			"(rs.name ILIKE $%d OR rs.title ILIKE $%d OR rs.skills ILIKE $%d OR rs.text ILIKE $%d)",
+			idx, idx, idx, idx,
+		))
+		args = append(args, "%"+escapeLike(f.Search)+"%")
 		idx++
 	}
 	if f.IsActive != nil {
@@ -333,22 +345,19 @@ func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, cur
 		idx++
 	}
 	if len(f.CategoryIDs) > 0 {
-		placeholders := make([]string, len(f.CategoryIDs))
-		for i, catID := range f.CategoryIDs {
-			placeholders[i] = fmt.Sprintf("$%d", idx)
-			args = append(args, catID)
-			idx++
-		}
 		conditions = append(conditions, fmt.Sprintf(`EXISTS (
 			SELECT 1 FROM category_resume cr
-			WHERE cr.resume_id = rs.id AND cr.categorya_id IN (%s)
-		)`, strings.Join(placeholders, ",")))
+			WHERE cr.resume_id = rs.id AND cr.categorya_id = ANY($%d)
+		)`, idx))
+		args = append(args, f.CategoryIDs)
+		idx++
 	}
 
-	// COUNT (filter shartlari bilan, cursor holda)
-	var total int64
-	countSQL := fmt.Sprintf(`SELECT COUNT(*) FROM resumes rs WHERE %s`, strings.Join(conditions, " AND "))
-	s.db.QueryRow(ctx, countSQL, args...).Scan(&total)
+	// Snapshot args/conditions for COUNT (no cursor) before modifying for data query
+	countConditions := make([]string, len(conditions))
+	copy(countConditions, conditions)
+	countArgs := make([]interface{}, len(args))
+	copy(countArgs, args)
 
 	orderCol, fallbackValue, valueKind := resumeOrderConfig(f.SortBy, f.SortOrder)
 	orderDir := normalizedOrder(f.SortOrder)
@@ -373,8 +382,22 @@ func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, cur
 		LIMIT $%d
 	`, strings.Join(conditions, " AND "), orderCol, orderDir, orderDir, idx)
 
+	// Run COUNT and data query in parallel
+	var (
+		total    int64
+		totalErr error
+		wg       sync.WaitGroup
+	)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		countSQL := fmt.Sprintf(`SELECT COUNT(*) FROM resumes rs WHERE %s`, strings.Join(countConditions, " AND "))
+		totalErr = s.db.QueryRow(ctx, countSQL, countArgs...).Scan(&total)
+	}()
+
 	rows, err := s.db.Query(ctx, query, args...)
 	if err != nil {
+		wg.Wait()
 		return nil, false, 0, err
 	}
 	defer rows.Close()
@@ -392,13 +415,20 @@ func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, cur
 			&rs.ViewsCount, &rs.IsActive,
 			&rs.CreatedAt, &rs.UpdatedAt, &rs.DeletedAt,
 		); err != nil {
+			wg.Wait()
 			return nil, false, 0, err
 		}
 		rs.Categories = []resume_dto.CategoryShort{}
 		items = append(items, &rs)
 	}
 	if err := rows.Err(); err != nil {
+		wg.Wait()
 		return nil, false, 0, err
+	}
+
+	wg.Wait()
+	if totalErr != nil {
+		return nil, false, 0, totalErr
 	}
 
 	hasMore := len(items) > limit
