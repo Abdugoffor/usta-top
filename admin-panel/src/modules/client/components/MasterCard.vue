@@ -34,16 +34,6 @@ const location = computed(() => {
   return parts.join(', ') || props.item.adress || ''
 })
 
-const timeAgo = computed(() => {
-  if (!props.item.created_at) return ''
-  const date = new Date(props.item.created_at)
-  const now = new Date()
-  const diff = Math.floor((now - date) / 1000)
-  if (diff < 3600) return `${Math.floor(diff/60)} ${t('time_minutes_ago')}`
-  if (diff < 86400) return `${Math.floor(diff/3600)} ${t('time_hours_ago')}`
-  return `${Math.floor(diff/86400)} ${t('time_days_ago')}`
-})
-
 const itemUrl = computed(() => `${window.location.origin}/${route.params.lang}/masters/${props.item.slug}`)
 
 const goDetail = () => {
@@ -93,7 +83,13 @@ const goDetail = () => {
         <span v-if="price" class="master-card__price">{{ price }} {{ t('price_sum') }}</span>
         <div class="master-card__actions">
           <span v-if="item.experience_year" class="master-card__exp">{{ item.experience_year }} {{ t('label_years_experience') }}</span>
-          <span v-if="timeAgo" class="master-card__time">{{ timeAgo }}</span>
+          <span v-if="item.views_count" class="master-card__views">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            {{ item.views_count }}
+          </span>
           <SharePanel :url="itemUrl" :title="item.name" :phone="item.contact" />
         </div>
       </div>
@@ -262,8 +258,16 @@ const goDetail = () => {
   color: #9ca3af;
 }
 
-.master-card__time {
+.master-card__views {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 12px;
   color: #9ca3af;
+}
+
+.master-card__views svg {
+  width: 13px;
+  height: 13px;
 }
 </style>

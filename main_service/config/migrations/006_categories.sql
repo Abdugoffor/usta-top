@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS categories (
     id         BIGSERIAL    PRIMARY KEY,
-    name       VARCHAR(255),
+    name       JSONB        DEFAULT '{}'::jsonb,
     is_active  BOOLEAN      DEFAULT TRUE,
     created_at TIMESTAMPTZ  DEFAULT NOW(),
     updated_at TIMESTAMPTZ  DEFAULT NOW(),

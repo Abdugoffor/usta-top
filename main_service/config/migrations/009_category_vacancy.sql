@@ -7,4 +7,4 @@ CREATE TABLE IF NOT EXISTS category_vacancy (
 );
 
 CREATE INDEX IF NOT EXISTS idx_cat_vacancy_categorya ON category_vacancy(categorya_id);
-CREATE INDEX IF NOT EXISTS idx_cat_vacancy_vacancy    ON category_vacancy(vacancy_id);
+CREATE INDEX IF NOT EXISTS idx_cat_vacancy_vacancy   ON category_vacancy(vacancy_id);
