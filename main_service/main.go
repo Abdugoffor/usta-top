@@ -91,8 +91,8 @@ func main() {
 	)
 
 	log.Printf("🚀 Server started on :%s", port)
-	// log.Printf("📖 Swagger UI: http://localhost:%s/swagger/index.html", port)
-	// log.Fatal(http.ListenAndServe(":"+port, handler))
-	log.Printf("📖 Swagger UI: http://172.20.10.13:%s/swagger/index.html", port)
-	log.Fatal(http.ListenAndServe("0.0.0.0:"+port, handler))
+	log.Printf("📖 Swagger UI: http://localhost:%s/swagger/index.html", port)
+	log.Fatal(http.ListenAndServe(":"+port, handler))
+	// log.Printf("📖 Swagger UI: http://172.20.10.13:%s/swagger/index.html", port)
+	// log.Fatal(http.ListenAndServe("0.0.0.0:"+port, middleware.CORS(router)))
 }

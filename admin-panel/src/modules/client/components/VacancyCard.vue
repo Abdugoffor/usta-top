@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import SharePanel from '@/shared/components/SharePanel.vue'
 
 const props = defineProps({
   item: { type: Object, required: true }
@@ -40,6 +41,8 @@ const timeAgo = computed(() => {
   if (diff < 86400) return `${Math.floor(diff/3600)} soat oldin`
   return `${Math.floor(diff/86400)} kun oldin`
 })
+
+const itemUrl = computed(() => `${window.location.origin}/vacancies/${props.item.slug}`)
 
 const goDetail = () => {
   if (props.item.slug) {
@@ -81,7 +84,10 @@ const goDetail = () => {
       </span>
       <div class="vacancy-card__bottom">
         <span v-if="price" class="vacancy-card__price">{{ price }} so'm</span>
-        <span v-if="timeAgo" class="vacancy-card__time">{{ timeAgo }}</span>
+        <div class="vacancy-card__actions">
+          <span v-if="timeAgo" class="vacancy-card__time">{{ timeAgo }}</span>
+          <SharePanel :url="itemUrl" :title="item.name || item.title" :phone="item.contact" />
+        </div>
       </div>
     </div>
   </div>
@@ -194,6 +200,13 @@ const goDetail = () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+}
+
+.vacancy-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .vacancy-card__price {

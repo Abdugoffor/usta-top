@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import SharePanel from '@/shared/components/SharePanel.vue'
 
 const props = defineProps({
   item: { type: Object, required: true }
@@ -30,6 +31,8 @@ const location = computed(() => {
   const parts = [props.item.region_name, props.item.district_name].filter(Boolean)
   return parts.join(', ') || props.item.adress || ''
 })
+
+const itemUrl = computed(() => `${window.location.origin}/masters/${props.item.slug}`)
 
 const goDetail = () => {
   if (props.item.slug) {
@@ -76,7 +79,10 @@ const goDetail = () => {
       </div>
       <div class="master-card__bottom">
         <span v-if="price" class="master-card__price">{{ price }} so'm</span>
-        <span v-if="item.experience_year" class="master-card__exp">{{ item.experience_year }} yil tajriba</span>
+        <div class="master-card__actions">
+          <span v-if="item.experience_year" class="master-card__exp">{{ item.experience_year }} yil tajriba</span>
+          <SharePanel :url="itemUrl" :title="item.name" :phone="item.contact" />
+        </div>
       </div>
     </div>
   </div>
@@ -223,6 +229,13 @@ const goDetail = () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+}
+
+.master-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .master-card__price {

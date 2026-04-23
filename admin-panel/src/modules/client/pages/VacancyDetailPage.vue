@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ClientHeader from '../components/ClientHeader.vue'
+import SharePanel from '@/shared/components/SharePanel.vue'
 import { getVacancy } from '../api/vacancyApi'
 
 const route = useRoute()
@@ -35,6 +36,8 @@ const timeAgo = computed(() => {
   return `${Math.floor(diff/86400)} kun oldin`
 })
 
+const pageUrl = computed(() => `${window.location.origin}/vacancies/${route.params.slug}`)
+
 const goBack = () => {
   router.push({ name: 'vacancies', query: { ...route.query } })
 }
@@ -62,10 +65,13 @@ onMounted(async () => {
     <template v-else-if="vacancy">
       <div class="vac-detail-hero">
         <div class="vac-detail-hero__inner">
-          <button class="detail-back" @click="goBack">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
-            Orqaga
-          </button>
+          <div class="detail-hero__nav">
+            <button class="detail-back" @click="goBack">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+              Orqaga
+            </button>
+            <SharePanel :url="pageUrl" :title="vacancy.name || vacancy.title" :phone="vacancy.contact" :dark="true" />
+          </div>
           <div class="vac-detail-hero__card">
             <div class="vac-detail-hero__icon" :style="{ background: iconColor + '33', color: iconColor }">
               <svg viewBox="0 0 24 24" fill="currentColor">
@@ -106,12 +112,12 @@ onMounted(async () => {
             <div class="vac-detail-hero__price-box">
               <div class="vac-detail-hero__price-label">Maosh</div>
               <div class="vac-detail-hero__price">{{ price ? price + ' so\'m' : 'Kelishiladi' }}</div>
-              <button v-if="vacancy.contact" class="vac-detail-contact-btn">
+              <a v-if="vacancy.contact" :href="'tel:' + vacancy.contact" class="vac-detail-contact-btn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.78A16 16 0 0 0 15 15.87l.85-.85a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
                 </svg>
                 {{ vacancy.contact }}
-              </button>
+              </a>
             </div>
           </div>
         </div>
@@ -129,12 +135,12 @@ onMounted(async () => {
           <aside class="vac-detail-aside">
             <div class="detail-aside__card">
               <h3 class="detail-aside__title">Aloqa ma'lumotlari</h3>
-              <div v-if="vacancy.contact" class="detail-aside__row">
+              <a v-if="vacancy.contact" :href="'tel:' + vacancy.contact" class="detail-aside__row detail-aside__phone">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.78A16 16 0 0 0 15 15.87l.85-.85a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
                 </svg>
                 <span>{{ vacancy.contact }}</span>
-              </div>
+              </a>
               <div v-if="location" class="detail-aside__row">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
@@ -180,7 +186,9 @@ onMounted(async () => {
 .vac-detail-hero { background: linear-gradient(135deg, #1e3a8a, #1d4ed8, #2563eb); padding: 32px 20px 40px; }
 .vac-detail-hero__inner { max-width: 1100px; margin: 0 auto; }
 
-.detail-back { display: inline-flex; align-items: center; gap: 6px; color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; margin-bottom: 20px; transition: all 0.2s; }
+.detail-hero__nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+
+.detail-back { display: inline-flex; align-items: center; gap: 6px; color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.2s; }
 .detail-back:hover { background: rgba(255,255,255,0.2); color: #fff; }
 .detail-back svg { width: 16px; height: 16px; }
 
@@ -207,9 +215,13 @@ onMounted(async () => {
 .vac-detail-hero__price-label { font-size: 12px; color: rgba(255,255,255,0.6); margin-bottom: 4px; }
 .vac-detail-hero__price { font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 12px; }
 
-.vac-detail-contact-btn { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; border-radius: 10px; padding: 10px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+.vac-detail-contact-btn { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; border-radius: 10px; padding: 10px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; text-decoration: none; transition: all 0.2s; }
 .vac-detail-contact-btn:hover { background: rgba(255,255,255,0.25); }
 .vac-detail-contact-btn svg { width: 14px; height: 14px; }
+
+.detail-aside__phone { text-decoration: none; color: #2563eb; font-weight: 600; border-radius: 8px; transition: background 0.15s; }
+.detail-aside__phone:hover { background: #eff6ff; }
+.detail-aside__phone svg { color: #2563eb; }
 
 .vac-detail-body { padding: 28px 20px 48px; }
 .vac-detail-body__inner { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1fr 300px; gap: 24px; align-items: start; }

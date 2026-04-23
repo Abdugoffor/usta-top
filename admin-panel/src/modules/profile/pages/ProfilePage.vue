@@ -5,6 +5,7 @@ import { useAuthStore } from '@/modules/auth/store/authStore'
 import { getResumes, deleteResume } from '@/modules/client/api/resumeApi'
 import { getVacancies, deleteVacancy } from '@/modules/client/api/vacancyApi'
 import ClientHeader from '@/modules/client/components/ClientHeader.vue'
+import { formatNumber } from '@/shared/utils/formatNumber'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -168,14 +169,14 @@ onMounted(() => {
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
               <polyline points="14 2 14 8 20 8"/>
             </svg>
-            Resumelarim ({{ resumesTotal }})
+            Resumelarim ({{ formatNumber(resumesTotal) }})
           </button>
           <button class="profile-tab" :class="{ 'profile-tab--active': activeTab === 'vacancies' }" @click="activeTab = 'vacancies'">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
               <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
             </svg>
-            Vakansiyalarim ({{ vacanciesTotal }})
+            Vakansiyalarim ({{ formatNumber(vacanciesTotal) }})
           </button>
         </div>
 
@@ -227,8 +228,13 @@ onMounted(() => {
 
             <div v-if="resumesHasMore" class="profile-load-more">
               <button class="load-more-btn" :disabled="loadingMoreResumes" @click="loadMoreResumes">
-                <span v-if="loadingMoreResumes">Yuklanmoqda...</span>
-                <span v-else>Ko'proq yuklash ({{ resumesTotal - myResumes.length }} ta qoldi)</span>
+                <span v-if="loadingMoreResumes" class="load-more-btn__spinner"></span>
+                <template v-else>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M12 5v14M5 12l7 7 7-7"/>
+                  </svg>
+                  Ko'proq yuklash
+                </template>
               </button>
             </div>
 
@@ -293,8 +299,13 @@ onMounted(() => {
 
             <div v-if="vacanciesHasMore" class="profile-load-more">
               <button class="load-more-btn" :disabled="loadingMoreVacancies" @click="loadMoreVacancies">
-                <span v-if="loadingMoreVacancies">Yuklanmoqda...</span>
-                <span v-else>Ko'proq yuklash ({{ vacanciesTotal - myVacancies.length }} ta qoldi)</span>
+                <span v-if="loadingMoreVacancies" class="load-more-btn__spinner"></span>
+                <template v-else>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M12 5v14M5 12l7 7 7-7"/>
+                  </svg>
+                  Ko'proq yuklash
+                </template>
               </button>
             </div>
 
@@ -607,20 +618,50 @@ onMounted(() => {
 }
 
 .load-more-btn {
-  padding: 12px 32px;
-  background: #fff;
-  border: 1.5px solid #2563eb;
-  color: #2563eb;
-  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 36px;
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  border: none;
+  color: #fff;
+  border-radius: 50px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
-  transition: all 0.2s;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
 }
 
-.load-more-btn:hover:not(:disabled) { background: #eff6ff; }
-.load-more-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.load-more-btn svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  transition: transform 0.25s ease;
+}
+
+.load-more-btn:hover:not(:disabled) {
+  box-shadow: 0 6px 22px rgba(37, 99, 235, 0.45);
+  transform: translateY(-2px);
+}
+
+.load-more-btn:hover:not(:disabled) svg { transform: translateY(3px); }
+
+.load-more-btn:disabled { opacity: 0.65; cursor: not-allowed; }
+
+.load-more-btn__spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
 
 .profile-empty__icon { font-size: 48px; margin-bottom: 16px; }
 

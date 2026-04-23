@@ -6,6 +6,7 @@ import VacancyCard from '../components/VacancyCard.vue'
 import { getVacancies } from '../api/vacancyApi'
 import { getResumes } from '../api/resumeApi'
 import { useClientListingPage } from '../composables/useClientListingPage'
+import { formatNumber } from '@/shared/utils/formatNumber'
 
 const route = useRoute()
 const router = useRouter()
@@ -78,7 +79,6 @@ const {
   loadingMore,
   mobileFilterOpen,
   onSortChange,
-  remaining,
   search,
   secondaryTotal: totalMasters,
   sortBy,
@@ -135,7 +135,7 @@ const {
             </svg>
           </div>
           <div class="client-stats-card__body">
-            <div class="client-stats-card__number client-stats-card__number--accent">{{ totalMasters }}</div>
+            <div class="client-stats-card__number client-stats-card__number--accent">{{ formatNumber(totalMasters) }}</div>
             <div class="client-stats-card__label">Usta / Mutaxassis</div>
           </div>
           <svg class="client-stats-card__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -151,7 +151,7 @@ const {
             </svg>
           </div>
           <div class="client-stats-card__body">
-            <div class="client-stats-card__number">{{ totalVacancies }}</div>
+            <div class="client-stats-card__number">{{ formatNumber(totalVacancies) }}</div>
             <div class="client-stats-card__label">Ish e'loni</div>
           </div>
         </div>
@@ -173,7 +173,7 @@ const {
         <div class="client-results">
           <div class="client-toolbar">
             <span class="client-toolbar__count">
-              <strong>{{ totalVacancies }}</strong> ta vakansiya
+              <strong>{{ formatNumber(totalVacancies) }}</strong> ta vakansiya
             </span>
 
             <div class="client-toolbar__actions">
@@ -222,8 +222,10 @@ const {
             >
               <span v-if="loadingMore" class="client-load-more-btn__spinner"></span>
               <template v-else>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M12 5v14M5 12l7 7 7-7"/>
+                </svg>
                 Ko'proq yuklash
-                <span class="client-load-more-btn__count">({{ remaining }} ta qoldi)</span>
               </template>
             </button>
           </div>
