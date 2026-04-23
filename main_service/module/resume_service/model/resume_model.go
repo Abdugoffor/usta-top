@@ -15,6 +15,7 @@ type Resume struct {
 	Title          *string
 	Text           *string
 	Contact        *string
+	Telegram       *string
 	Price          *int64
 	ExperienceYear *int
 	Skills         *string

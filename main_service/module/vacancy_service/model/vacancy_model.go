@@ -14,6 +14,7 @@ type Vacancy struct {
 	Title      *string
 	Text       *string
 	Contact    *string
+	Telegram   *string
 	Price      *int64
 	ViewsCount *int64
 	IsActive   *bool

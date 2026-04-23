@@ -6,10 +6,12 @@ import { getCategories } from '@/modules/category/api/categoryApi'
 import { getVacancy, updateVacancy } from '@/modules/client/api/vacancyApi'
 import { getCountries } from '@/modules/country/api/countryApi'
 import ClientHeader from '@/modules/client/components/ClientHeader.vue'
+import { useI18n } from '@/shared/composables/useI18n'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+const { t, langName } = useI18n()
 
 const vacancyId = ref(null)
 const form = ref({
@@ -18,6 +20,7 @@ const form = ref({
   adress: '',
   text: '',
   contact: '',
+  telegram: '',
   price: '',
   region_id: null,
   district_id: null,
@@ -68,19 +71,17 @@ const submit = async () => {
   fieldErrors.value = {}
   loading.value = true
   try {
-    const payload = {
-      name: form.value.name,
-      title: form.value.title,
-      adress: form.value.adress,
-      text: form.value.text,
-      contact: form.value.contact,
-      is_active: form.value.is_active,
-      category_ids: form.value.category_ids,
-    }
-    if (form.value.price) payload.price = Number(form.value.price)
-    if (form.value.region_id) payload.region_id = form.value.region_id
-    if (form.value.district_id) payload.district_id = form.value.district_id
-    if (form.value.mahalla_id) payload.mahalla_id = form.value.mahalla_id
+    const payload = { is_active: form.value.is_active, category_ids: form.value.category_ids }
+    if (form.value.name)    payload.name    = form.value.name
+    if (form.value.title)   payload.title   = form.value.title
+    if (form.value.adress)  payload.adress  = form.value.adress
+    if (form.value.text)    payload.text    = form.value.text
+    if (form.value.contact) payload.contact = form.value.contact
+    if (form.value.telegram) payload.telegram = form.value.telegram
+    if (form.value.price)        payload.price        = Number(form.value.price)
+    if (form.value.region_id)    payload.region_id    = form.value.region_id
+    if (form.value.district_id)  payload.district_id  = form.value.district_id
+    if (form.value.mahalla_id)   payload.mahalla_id   = form.value.mahalla_id
 
     await updateVacancy(vacancyId.value, payload)
     router.push({ name: 'profile' })
@@ -113,6 +114,7 @@ onMounted(async () => {
       adress: v.adress || '',
       text: v.text || '',
       contact: v.contact || '',
+      telegram: v.telegram || '',
       price: v.price || '',
       region_id: v.region_id || null,
       district_id: v.district_id || null,
@@ -152,10 +154,10 @@ onMounted(async () => {
         <div class="create-hero__inner">
           <RouterLink :to="`/${route.params.lang}/profile`" class="create-back">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
-            Profilga qaytish
+            {{ t('profile_back') }}
           </RouterLink>
-          <h1>Vakansiyani tahrirlash</h1>
-          <p>Ma'lumotlarni yangilang</p>
+          <h1>{{ t('vacancy_edit_title') }}</h1>
+          <p>{{ t('form_update_info') }}</p>
         </div>
       </div>
 
@@ -167,32 +169,37 @@ onMounted(async () => {
             <div class="form-section">
               <h3 class="form-section__title">
                 <span class="form-section__num">1</span>
-                Vakansiya ma'lumotlari
+                {{ t('form_section_vacancy_info') }}
               </h3>
               <div class="form-grid">
                 <div class="form-field" :class="{ 'form-field--error': fieldErrors.name }">
-                  <label>Lavozim nomi <span class="req">*</span></label>
+                  <label>{{ t('field_position') }} <span class="req">*</span></label>
                   <input v-model="form.name" type="text" placeholder="Elektrik usta" required />
                   <span v-if="fieldErrors.name" class="form-field__err">{{ fieldErrors.name }}</span>
                 </div>
                 <div class="form-field" :class="{ 'form-field--error': fieldErrors.title }">
-                  <label>Qo'shimcha sarlavha <span class="req">*</span></label>
+                  <label>{{ t('field_subtitle') }} <span class="req">*</span></label>
                   <input v-model="form.title" type="text" placeholder="Tajribali elektrik usta kerak" required />
                   <span v-if="fieldErrors.title" class="form-field__err">{{ fieldErrors.title }}</span>
                 </div>
                 <div class="form-field" :class="{ 'form-field--error': fieldErrors.contact }">
-                  <label>Aloqa telefon <span class="req">*</span></label>
+                  <label>{{ t('field_contact_phone') }} <span class="req">*</span></label>
                   <input v-model="form.contact" type="text" placeholder="+998 90 123 45 67" required />
                   <span v-if="fieldErrors.contact" class="form-field__err">{{ fieldErrors.contact }}</span>
                 </div>
+                <div class="form-field" :class="{ 'form-field--error': fieldErrors.telegram }">
+                  <label>{{ t('field_telegram') }}</label>
+                  <input v-model="form.telegram" type="text" placeholder="@username" />
+                  <span v-if="fieldErrors.telegram" class="form-field__err">{{ fieldErrors.telegram }}</span>
+                </div>
                 <div class="form-field" :class="{ 'form-field--error': fieldErrors.price }">
-                  <label>Maosh (so'm / oyiga)</label>
+                  <label>{{ t('field_salary') }}</label>
                   <input v-model="form.price" type="number" placeholder="5000000" min="0" />
                 </div>
               </div>
 
               <div class="form-field form-field--full" :class="{ 'form-field--error': fieldErrors.text }">
-                <label>Vakansiya tavsifi <span class="req">*</span></label>
+                <label>{{ t('field_vacancy_desc') }} <span class="req">*</span></label>
                 <textarea v-model="form.text" rows="6" placeholder="Vakansiya haqida batafsil..." required></textarea>
                 <span v-if="fieldErrors.text" class="form-field__err">{{ fieldErrors.text }}</span>
               </div>
@@ -201,32 +208,32 @@ onMounted(async () => {
             <div class="form-section">
               <h3 class="form-section__title">
                 <span class="form-section__num">2</span>
-                Joylashuv
+                {{ t('form_section_location') }}
               </h3>
               <div class="form-grid">
                 <div class="form-field">
-                  <label>Viloyat</label>
+                  <label>{{ t('field_region') }}</label>
                   <select :value="form.region_id || ''" @change="selectRegion($event.target.value)">
-                    <option value="">Tanlang</option>
+                    <option value="">{{ t('option_select') }}</option>
                     <option v-for="r in regions" :key="r.id" :value="r.id">{{ r.name }}</option>
                   </select>
                 </div>
                 <div class="form-field" v-if="districts.length">
-                  <label>Tuman</label>
+                  <label>{{ t('field_district') }}</label>
                   <select :value="form.district_id || ''" @change="selectDistrict($event.target.value)">
-                    <option value="">Tanlang</option>
+                    <option value="">{{ t('option_select') }}</option>
                     <option v-for="d in districts" :key="d.id" :value="d.id">{{ d.name }}</option>
                   </select>
                 </div>
                 <div class="form-field" v-if="mahallas.length">
-                  <label>Mahalla</label>
+                  <label>{{ t('field_mahalla') }}</label>
                   <select :value="form.mahalla_id || ''" @change="form.mahalla_id = $event.target.value ? Number($event.target.value) : null">
-                    <option value="">Tanlang</option>
+                    <option value="">{{ t('option_select') }}</option>
                     <option v-for="m in mahallas" :key="m.id" :value="m.id">{{ m.name }}</option>
                   </select>
                 </div>
                 <div class="form-field form-field--full" :class="{ 'form-field--error': fieldErrors.adress }">
-                  <label>To'liq manzil <span class="req">*</span></label>
+                  <label>{{ t('field_address') }} <span class="req">*</span></label>
                   <input v-model="form.adress" type="text" placeholder="Toshkent, Yunusobod tumani..." required />
                   <span v-if="fieldErrors.adress" class="form-field__err">{{ fieldErrors.adress }}</span>
                 </div>
@@ -236,7 +243,7 @@ onMounted(async () => {
             <div class="form-section" v-if="categories.length">
               <h3 class="form-section__title">
                 <span class="form-section__num">3</span>
-                Kategoriyalar
+                {{ t('form_section_categories') }}
               </h3>
               <div class="cat-chips">
                 <button
@@ -247,7 +254,7 @@ onMounted(async () => {
                   :class="{ 'cat-chip--active': form.category_ids.includes(cat.id) }"
                   @click="toggleCategory(cat.id)"
                 >
-                  {{ cat.name }}
+                  {{ langName(cat.name) }}
                 </button>
               </div>
             </div>
@@ -255,12 +262,12 @@ onMounted(async () => {
             <div class="form-section">
               <h3 class="form-section__title">
                 <span class="form-section__num">{{ categories.length ? '4' : '3' }}</span>
-                Holat
+                {{ t('form_section_status') }}
               </h3>
               <label class="toggle-row">
                 <div>
-                  <div class="toggle-row__label">Vakansiyani faol qilish</div>
-                  <div class="toggle-row__sub">Faol bo'lsa, ishchilar ko'rishi mumkin</div>
+                  <div class="toggle-row__label">{{ t('vacancy_activate_label') }}</div>
+                  <div class="toggle-row__sub">{{ t('vacancy_activate_hint') }}</div>
                 </div>
                 <label class="toggle-switch">
                   <input type="checkbox" v-model="form.is_active" />
@@ -270,10 +277,10 @@ onMounted(async () => {
             </div>
 
             <div class="form-actions">
-              <RouterLink :to="`/${route.params.lang}/profile`" class="form-cancel">Bekor qilish</RouterLink>
+              <RouterLink :to="`/${route.params.lang}/profile`" class="form-cancel">{{ t('action_cancel') }}</RouterLink>
               <button type="submit" class="form-submit" :disabled="loading">
                 <span v-if="loading" class="btn-spinner"></span>
-                {{ loading ? 'Saqlanmoqda...' : "O'zgarishlarni saqlash" }}
+                {{ loading ? t('saving') : t('action_save_changes') }}
               </button>
             </div>
           </form>

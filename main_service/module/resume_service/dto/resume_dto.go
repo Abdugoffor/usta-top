@@ -14,6 +14,7 @@ type CreateResumeRequest struct {
 	Title          string  `json:"title"           validate:"required,min=2,max=500"`
 	Text           string  `json:"text"            validate:"required,min=10"`
 	Contact        string  `json:"contact"         validate:"required,min=5,max=255"`
+	Telegram       *string `json:"telegram"        validate:"omitempty,max=100"`
 	Price          *int64  `json:"price"`
 	ExperienceYear *int    `json:"experience_year"`
 	Skills         string  `json:"skills"          validate:"required,min=2"`
@@ -31,10 +32,12 @@ type UpdateResumeRequest struct {
 	Title          *string `json:"title"           validate:"omitempty,min=2,max=500"`
 	Text           *string `json:"text"            validate:"omitempty,min=10"`
 	Contact        *string `json:"contact"         validate:"omitempty,min=5,max=255"`
+	Telegram       *string `json:"telegram"        validate:"omitempty,max=100"`
 	Price          *int64  `json:"price"`
 	ExperienceYear *int    `json:"experience_year"`
 	Skills         *string `json:"skills"          validate:"omitempty,min=2"`
 	IsActive       *bool   `json:"is_active"`
+	CategoryIDs    []int64 `json:"category_ids"`
 }
 
 // ─── Filter ──────────────────────────────────────────────────────────────────
@@ -60,9 +63,9 @@ type ResumeFilter struct {
 // ─── Response DTOs ───────────────────────────────────────────────────────────
 
 type CategoryShort struct {
-	ID       int64  `json:"id"`
-	Name     string `json:"name"`
-	IsActive bool   `json:"is_active"`
+	ID       int64             `json:"id"`
+	Name     map[string]string `json:"name"`
+	IsActive bool              `json:"is_active"`
 }
 
 type ResumeResponse struct {
@@ -81,6 +84,7 @@ type ResumeResponse struct {
 	Title          *string         `json:"title"`
 	Text           *string         `json:"text"`
 	Contact        *string         `json:"contact"`
+	Telegram       *string         `json:"telegram"`
 	Price          *int64          `json:"price"`
 	ExperienceYear *int            `json:"experience_year"`
 	Skills         *string         `json:"skills"`

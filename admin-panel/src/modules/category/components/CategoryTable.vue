@@ -77,8 +77,8 @@ const sortIcon = (field) => {
 
           <td class="ct-td">
             <div class="ct-name">
-              <div class="ct-name__avatar">{{ item.name?.charAt(0)?.toUpperCase() }}</div>
-              <span class="ct-name__text">{{ item.name }}</span>
+              <div class="ct-name__avatar">{{ (item.name?.default || item.name?.uz || '')?.charAt(0)?.toUpperCase() }}</div>
+              <span class="ct-name__text">{{ item.name?.default || item.name?.uz || '—' }}</span>
             </div>
           </td>
 

@@ -2,6 +2,7 @@ package vacancy_service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"main_service/helper"
 	vacancy_dto "main_service/module/vacancy_service/dto"
@@ -62,7 +63,7 @@ func scanVacancy(row interface{ Scan(...interface{}) error }, v *vacancy_dto.Vac
 		&v.RegionID, &v.RegionName,
 		&v.DistrictID, &v.DistrictName,
 		&v.MahallaID, &v.MahallaName,
-		&v.Adress, &v.Name, &v.Title, &v.Text, &v.Contact,
+		&v.Adress, &v.Name, &v.Title, &v.Text, &v.Contact, &v.Telegram,
 		&v.Price, &v.ViewsCount, &v.IsActive,
 		&v.CreatedAt, &v.UpdatedAt, &v.DeletedAt,
 	)
@@ -83,11 +84,17 @@ func (s *vacancyService) fetchCategories(ctx context.Context, vacancyID int64) (
 
 	var cats []vacancy_dto.CategoryShort
 	for rows.Next() {
-		var cat vacancy_dto.CategoryShort
-		if err := rows.Scan(&cat.ID, &cat.Name, &cat.IsActive); err != nil {
+		var (
+			id        int64
+			nameBytes []byte
+			isActive  bool
+		)
+		if err := rows.Scan(&id, &nameBytes, &isActive); err != nil {
 			return nil, err
 		}
-		cats = append(cats, cat)
+		var name map[string]string
+		_ = json.Unmarshal(nameBytes, &name)
+		cats = append(cats, vacancy_dto.CategoryShort{ID: id, Name: name, IsActive: isActive})
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -152,11 +159,11 @@ func (s *vacancyService) Create(ctx context.Context, userID int64, req vacancy_d
 
 	var id int64
 	err = tx.QueryRow(ctx, `
-		INSERT INTO vacancies (user_id, region_id, district_id, mahalla_id, adress, name, title, text, contact, price, is_active)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		INSERT INTO vacancies (user_id, region_id, district_id, mahalla_id, adress, name, title, text, contact, telegram, price, is_active)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		RETURNING id
 	`, userID, req.RegionID, req.DistrictID, req.MahallaID,
-		req.Adress, req.Name, req.Title, req.Text, req.Contact,
+		req.Adress, req.Name, req.Title, req.Text, req.Contact, req.Telegram,
 		req.Price, isActive).Scan(&id)
 	if err != nil {
 		return nil, err
@@ -264,6 +271,11 @@ func (s *vacancyService) Update(ctx context.Context, id, userID int64, req vacan
 	if req.Contact != nil {
 		setClauses = append(setClauses, fmt.Sprintf("contact = $%d", idx))
 		args = append(args, *req.Contact)
+		idx++
+	}
+	if req.Telegram != nil {
+		setClauses = append(setClauses, fmt.Sprintf("telegram = $%d", idx))
+		args = append(args, *req.Telegram)
 		idx++
 	}
 	if req.Price != nil {
@@ -415,7 +427,7 @@ func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, 
 		       v.region_id,   COALESCE(r.name, ''),
 		       v.district_id, COALESCE(d.name, ''),
 		       v.mahalla_id,  COALESCE(m.name, ''),
-		       v.adress, v.name, v.title, v.text, v.contact,
+		       v.adress, v.name, v.title, v.text, v.contact, v.telegram,
 		       v.price, v.views_count, v.is_active,
 		       v.created_at, v.updated_at, v.deleted_at
 		FROM vacancies v
@@ -455,7 +467,7 @@ func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, 
 			&v.RegionID, &v.RegionName,
 			&v.DistrictID, &v.DistrictName,
 			&v.MahallaID, &v.MahallaName,
-			&v.Adress, &v.Name, &v.Title, &v.Text, &v.Contact,
+			&v.Adress, &v.Name, &v.Title, &v.Text, &v.Contact, &v.Telegram,
 			&v.Price, &v.ViewsCount, &v.IsActive,
 			&v.CreatedAt, &v.UpdatedAt, &v.DeletedAt,
 		); err != nil {
@@ -498,9 +510,16 @@ func (s *vacancyService) List(ctx context.Context, f vacancy_dto.VacancyFilter, 
 		if err == nil {
 			defer catRows.Close()
 			for catRows.Next() {
-				var vacancyID int64
-				var cat vacancy_dto.CategoryShort
-				if err := catRows.Scan(&vacancyID, &cat.ID, &cat.Name, &cat.IsActive); err == nil {
+				var (
+					vacancyID int64
+					catID     int64
+					nameBytes []byte
+					isActive  bool
+				)
+				if err := catRows.Scan(&vacancyID, &catID, &nameBytes, &isActive); err == nil {
+					var name map[string]string
+					_ = json.Unmarshal(nameBytes, &name)
+					cat := vacancy_dto.CategoryShort{ID: catID, Name: name, IsActive: isActive}
 					if i, ok := indexMap[vacancyID]; ok {
 						items[i].Categories = append(items[i].Categories, cat)
 					}

@@ -2,6 +2,7 @@ package resume_service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"main_service/helper"
 	resume_dto "main_service/module/resume_service/dto"
@@ -63,11 +64,17 @@ func (s *resumeService) fetchCategories(ctx context.Context, resumeID int64) ([]
 
 	var cats []resume_dto.CategoryShort
 	for rows.Next() {
-		var c resume_dto.CategoryShort
-		if err := rows.Scan(&c.ID, &c.Name, &c.IsActive); err != nil {
+		var (
+			id        int64
+			nameBytes []byte
+			isActive  bool
+		)
+		if err := rows.Scan(&id, &nameBytes, &isActive); err != nil {
 			return nil, err
 		}
-		cats = append(cats, c)
+		var name map[string]string
+		_ = json.Unmarshal(nameBytes, &name)
+		cats = append(cats, resume_dto.CategoryShort{ID: id, Name: name, IsActive: isActive})
 	}
 	if cats == nil {
 		cats = []resume_dto.CategoryShort{}
@@ -81,7 +88,7 @@ func scanResume(row interface{ Scan(...interface{}) error }, r *resume_dto.Resum
 		&r.RegionID, &r.RegionName,
 		&r.DistrictID, &r.DistrictName,
 		&r.MahallaID, &r.MahallaName,
-		&r.Adress, &r.Name, &r.Photo, &r.Title, &r.Text, &r.Contact,
+		&r.Adress, &r.Name, &r.Photo, &r.Title, &r.Text, &r.Contact, &r.Telegram,
 		&r.Price, &r.ExperienceYear, &r.Skills,
 		&r.ViewsCount, &r.IsActive,
 		&r.CreatedAt, &r.UpdatedAt, &r.DeletedAt,
@@ -115,11 +122,11 @@ func (s *resumeService) Create(ctx context.Context, userID int64, req resume_dto
 
 	var id int64
 	err := s.db.QueryRow(ctx, `
-		INSERT INTO resumes (user_id, region_id, district_id, mahalla_id, adress, name, photo, title, text, contact, price, experience_year, skills, is_active)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+		INSERT INTO resumes (user_id, region_id, district_id, mahalla_id, adress, name, photo, title, text, contact, telegram, price, experience_year, skills, is_active)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 		RETURNING id
 	`, userID, req.RegionID, req.DistrictID, req.MahallaID,
-		req.Adress, req.Name, req.Photo, req.Title, req.Text, req.Contact,
+		req.Adress, req.Name, req.Photo, req.Title, req.Text, req.Contact, req.Telegram,
 		req.Price, req.ExperienceYear, req.Skills, isActive).Scan(&id)
 	if err != nil {
 		return nil, err
@@ -185,6 +192,12 @@ func (s *resumeService) GetBySlug(ctx context.Context, slug string) (*resume_dto
 // ─── Update ──────────────────────────────────────────────────────────────────
 
 func (s *resumeService) Update(ctx context.Context, id, userID int64, req resume_dto.UpdateResumeRequest) (*resume_dto.ResumeResponse, error) {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
 	setClauses := []string{"updated_at = NOW()"}
 	args := []interface{}{}
 	idx := 1
@@ -195,7 +208,7 @@ func (s *resumeService) Update(ctx context.Context, id, userID int64, req resume
 	}{
 		{req.RegionID, "region_id"}, {req.DistrictID, "district_id"}, {req.MahallaID, "mahalla_id"},
 		{req.Adress, "adress"}, {req.Name, "name"}, {req.Photo, "photo"},
-		{req.Title, "title"}, {req.Text, "text"}, {req.Contact, "contact"},
+		{req.Title, "title"}, {req.Text, "text"}, {req.Contact, "contact"}, {req.Telegram, "telegram"},
 		{req.Price, "price"}, {req.ExperienceYear, "experience_year"},
 		{req.Skills, "skills"}, {req.IsActive, "is_active"},
 	}
@@ -217,8 +230,29 @@ func (s *resumeService) Update(ctx context.Context, id, userID int64, req resume
 	`, strings.Join(setClauses, ", "), idx, idx+1)
 
 	var retID int64
-	if err := s.db.QueryRow(ctx, query, args...).Scan(&retID); err != nil {
+	if err := tx.QueryRow(ctx, query, args...).Scan(&retID); err != nil {
 		return nil, fmt.Errorf("resume not found or access denied")
+	}
+
+	if req.CategoryIDs != nil {
+		if _, err := tx.Exec(ctx, `DELETE FROM category_resume WHERE resume_id = $1`, retID); err != nil {
+			return nil, err
+		}
+		for _, catID := range req.CategoryIDs {
+			if catID <= 0 {
+				continue
+			}
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO category_resume (categorya_id, resume_id)
+				VALUES ($1, $2) ON CONFLICT (categorya_id, resume_id) DO NOTHING
+			`, catID, retID); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
 	}
 	return s.GetByID(ctx, retID)
 }
@@ -369,7 +403,7 @@ func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, cur
 		       rs.region_id,   COALESCE(r.name, ''),
 		       rs.district_id, COALESCE(d.name, ''),
 		       rs.mahalla_id,  COALESCE(m.name, ''),
-		       rs.adress, rs.name, rs.photo, rs.title, rs.text, rs.contact,
+		       rs.adress, rs.name, rs.photo, rs.title, rs.text, rs.contact, rs.telegram,
 		       rs.price, rs.experience_year, rs.skills,
 		       rs.views_count, rs.is_active,
 		       rs.created_at, rs.updated_at, rs.deleted_at
@@ -410,7 +444,7 @@ func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, cur
 			&rs.RegionID, &rs.RegionName,
 			&rs.DistrictID, &rs.DistrictName,
 			&rs.MahallaID, &rs.MahallaName,
-			&rs.Adress, &rs.Name, &rs.Photo, &rs.Title, &rs.Text, &rs.Contact,
+			&rs.Adress, &rs.Name, &rs.Photo, &rs.Title, &rs.Text, &rs.Contact, &rs.Telegram,
 			&rs.Price, &rs.ExperienceYear, &rs.Skills,
 			&rs.ViewsCount, &rs.IsActive,
 			&rs.CreatedAt, &rs.UpdatedAt, &rs.DeletedAt,
@@ -453,9 +487,16 @@ func (s *resumeService) List(ctx context.Context, f resume_dto.ResumeFilter, cur
 		if err == nil {
 			defer catRows.Close()
 			for catRows.Next() {
-				var resumeID int64
-				var cat resume_dto.CategoryShort
-				if err := catRows.Scan(&resumeID, &cat.ID, &cat.Name, &cat.IsActive); err == nil {
+				var (
+					resumeID  int64
+					catID     int64
+					nameBytes []byte
+					isActive  bool
+				)
+				if err := catRows.Scan(&resumeID, &catID, &nameBytes, &isActive); err == nil {
+					var name map[string]string
+					_ = json.Unmarshal(nameBytes, &name)
+					cat := resume_dto.CategoryShort{ID: catID, Name: name, IsActive: isActive}
 					if i, ok := idxMap[resumeID]; ok {
 						items[i].Categories = append(items[i].Categories, cat)
 					}

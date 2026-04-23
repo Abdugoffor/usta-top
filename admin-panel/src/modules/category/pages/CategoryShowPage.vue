@@ -51,8 +51,8 @@ onMounted(async () => {
         <div class="show-field">
           <span class="show-field__label">Nomi</span>
           <div class="ct-name">
-            <div class="ct-name__avatar">{{ item.name?.charAt(0)?.toUpperCase() }}</div>
-            <span class="show-field__value">{{ item.name }}</span>
+            <div class="ct-name__avatar">{{ (item.name?.default || item.name?.uz || '')?.charAt(0)?.toUpperCase() }}</div>
+            <span class="show-field__value">{{ item.name?.default || item.name?.uz || '—' }}</span>
           </div>
         </div>
         <div class="show-field">

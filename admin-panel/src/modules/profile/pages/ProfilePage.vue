@@ -6,10 +6,12 @@ import { getResumes, deleteResume } from '@/modules/client/api/resumeApi'
 import { getVacancies, deleteVacancy } from '@/modules/client/api/vacancyApi'
 import ClientHeader from '@/modules/client/components/ClientHeader.vue'
 import { formatNumber } from '@/shared/utils/formatNumber'
+import { useI18n } from '@/shared/composables/useI18n'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+const { t } = useI18n()
 
 const LIMIT = 20
 
@@ -101,22 +103,22 @@ const doLogout = () => {
 }
 
 const doDeleteResume = async (id) => {
-  if (!confirm("Resumeni o'chirishni tasdiqlaysizmi?")) return
+  if (!confirm(t('profile_confirm_delete_resume'))) return
   try {
     await deleteResume(id)
     myResumes.value = myResumes.value.filter(r => r.id !== id)
   } catch {
-    alert("O'chirishda xatolik yuz berdi")
+    alert(t('error_delete'))
   }
 }
 
 const doDeleteVacancy = async (id) => {
-  if (!confirm("Vakansiyani o'chirishni tasdiqlaysizmi?")) return
+  if (!confirm(t('profile_confirm_delete_vacancy'))) return
   try {
     await deleteVacancy(id)
     myVacancies.value = myVacancies.value.filter(v => v.id !== id)
   } catch {
-    alert("O'chirishda xatolik yuz berdi")
+    alert(t('error_delete'))
   }
 }
 
@@ -147,7 +149,7 @@ onMounted(() => {
           <h1 class="profile-hero__name">{{ auth.user?.full_name }}</h1>
           <p class="profile-hero__phone">{{ auth.user?.phone }}</p>
           <span class="profile-hero__role">
-            {{ auth.user?.role === 'employer' ? '🏢 Ish beruvchi' : '👷 Usta / Ishchi' }}
+            {{ auth.user?.role === 'employer' ? t('profile_role_employer') : t('profile_role_worker') }}
           </span>
         </div>
         <button class="profile-hero__logout" @click="doLogout">
@@ -156,7 +158,7 @@ onMounted(() => {
             <polyline points="16 17 21 12 16 7"/>
             <line x1="21" y1="12" x2="9" y2="12"/>
           </svg>
-          Chiqish
+          {{ t('profile_logout') }}
         </button>
       </div>
     </div>
@@ -170,30 +172,30 @@ onMounted(() => {
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
               <polyline points="14 2 14 8 20 8"/>
             </svg>
-            Resumelarim ({{ formatNumber(resumesTotal) }})
+            {{ t('profile_tab_resumes') }} ({{ formatNumber(resumesTotal) }})
           </button>
           <button class="profile-tab" :class="{ 'profile-tab--active': activeTab === 'vacancies' }" @click="activeTab = 'vacancies'">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
               <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
             </svg>
-            Vakansiyalarim ({{ formatNumber(vacanciesTotal) }})
+            {{ t('profile_tab_vacancies') }} ({{ formatNumber(vacanciesTotal) }})
           </button>
         </div>
 
         <!-- Resumes Tab -->
         <div v-if="activeTab === 'resumes'">
           <div class="profile-section__header">
-            <h2>Mening resumelarim</h2>
+            <h2>{{ t('profile_my_resumes') }}</h2>
             <RouterLink :to="{ name: 'resume-create', params: { lang: route.params.lang } }" class="profile-create-btn">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
               </svg>
-              Yangi resume
+              {{ t('profile_new_resume') }}
             </RouterLink>
           </div>
 
-          <div v-if="loadingResumes" class="profile-loading">Yuklanmoqda...</div>
+          <div v-if="loadingResumes" class="profile-loading">{{ t('loading') }}</div>
 
           <template v-else>
             <div v-if="myResumes.length" class="profile-list">
@@ -207,16 +209,16 @@ onMounted(() => {
                     <div class="profile-item__sub">{{ r.title }}</div>
                     <div class="profile-item__meta">
                       <span>{{ formatPrice(r.price) }}</span>
-                      <span v-if="r.experience_year">• {{ r.experience_year }} yil tajriba</span>
+                      <span v-if="r.experience_year">• {{ r.experience_year }} {{ t('experience_years') }}</span>
                       <span>• {{ formatDate(r.created_at) }}</span>
                     </div>
                   </div>
                 </div>
                 <div class="profile-item__right">
                   <span class="profile-item__badge" :class="r.is_active ? 'badge--active' : 'badge--inactive'">
-                    {{ r.is_active ? 'Faol' : 'Yopiq' }}
+                    {{ r.is_active ? t('status_active') : t('status_inactive') }}
                   </span>
-                  <RouterLink :to="{ name: 'master-detail', params: { lang: route.params.lang, slug: r.slug } }" class="profile-item__view">Ko'rish</RouterLink>
+                  <RouterLink :to="{ name: 'master-detail', params: { lang: route.params.lang, slug: r.slug } }" class="profile-item__view">{{ t('action_view') }}</RouterLink>
                   <RouterLink :to="{ name: 'resume-edit', params: { lang: route.params.lang, id: r.slug } }" class="profile-item__edit">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   </RouterLink>
@@ -234,17 +236,17 @@ onMounted(() => {
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                     <path d="M12 5v14M5 12l7 7 7-7"/>
                   </svg>
-                  Ko'proq yuklash
+                  {{ t('load_more') }}
                 </template>
               </button>
             </div>
 
             <div v-if="!myResumes.length" class="profile-empty">
               <div class="profile-empty__icon">📄</div>
-              <h3>Resumelaringiz yo'q</h3>
-              <p>Birinchi resumeingizni yarating</p>
+              <h3>{{ t('profile_no_resumes') }}</h3>
+              <p>{{ t('profile_no_resumes_hint') }}</p>
               <RouterLink :to="{ name: 'resume-create', params: { lang: route.params.lang } }" class="profile-create-btn profile-create-btn--lg">
-                Resume yaratish
+                {{ t('profile_create_resume') }}
               </RouterLink>
             </div>
           </template>
@@ -253,16 +255,16 @@ onMounted(() => {
         <!-- Vacancies Tab -->
         <div v-if="activeTab === 'vacancies'">
           <div class="profile-section__header">
-            <h2>Mening vakansiyalarim</h2>
+            <h2>{{ t('profile_my_vacancies') }}</h2>
             <RouterLink :to="{ name: 'vacancy-create', params: { lang: route.params.lang } }" class="profile-create-btn">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
               </svg>
-              Yangi vakansiya
+              {{ t('profile_new_vacancy') }}
             </RouterLink>
           </div>
 
-          <div v-if="loadingVacancies" class="profile-loading">Yuklanmoqda...</div>
+          <div v-if="loadingVacancies" class="profile-loading">{{ t('loading') }}</div>
 
           <template v-else>
             <div v-if="myVacancies.length" class="profile-list">
@@ -285,9 +287,9 @@ onMounted(() => {
                 </div>
                 <div class="profile-item__right">
                   <span class="profile-item__badge" :class="v.is_active ? 'badge--active' : 'badge--inactive'">
-                    {{ v.is_active ? 'Faol' : 'Yopiq' }}
+                    {{ v.is_active ? t('status_active') : t('status_inactive') }}
                   </span>
-                  <RouterLink :to="{ name: 'vacancy-detail', params: { lang: route.params.lang, slug: v.slug } }" class="profile-item__view">Ko'rish</RouterLink>
+                  <RouterLink :to="{ name: 'vacancy-detail', params: { lang: route.params.lang, slug: v.slug } }" class="profile-item__view">{{ t('action_view') }}</RouterLink>
                   <RouterLink :to="{ name: 'vacancy-edit', params: { lang: route.params.lang, id: v.slug } }" class="profile-item__edit">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   </RouterLink>
@@ -305,17 +307,17 @@ onMounted(() => {
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                     <path d="M12 5v14M5 12l7 7 7-7"/>
                   </svg>
-                  Ko'proq yuklash
+                  {{ t('load_more') }}
                 </template>
               </button>
             </div>
 
             <div v-if="!myVacancies.length" class="profile-empty">
               <div class="profile-empty__icon">📋</div>
-              <h3>Vakansiyalaringiz yo'q</h3>
-              <p>Birinchi vakansiyangizni e'lon qiling</p>
+              <h3>{{ t('profile_no_vacancies') }}</h3>
+              <p>{{ t('profile_no_vacancies_hint') }}</p>
               <RouterLink :to="{ name: 'vacancy-create', params: { lang: route.params.lang } }" class="profile-create-btn profile-create-btn--lg">
-                Vakansiya e'lon qilish
+                {{ t('profile_create_vacancy') }}
               </RouterLink>
             </div>
           </template>

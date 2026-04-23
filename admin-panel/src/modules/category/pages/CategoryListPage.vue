@@ -54,7 +54,7 @@ const goEdit   = (item) => router.push({ name: 'category-edit', params: { id: it
 const deleteItem = async (item) => {
   const result = await Swal.fire({
     title: 'Ochirishni xohlaysizmi?',
-    html: `<span style="color:#94a3b8">"${item.name}"</span> o'chiriladi`,
+    html: `<span style="color:#94a3b8">"${item.name?.default || item.name?.uz || ''}"</span> o'chiriladi`,
     icon: 'warning',
     showCancelButton: true,
     confirmButtonText: "Ha, o'chir",

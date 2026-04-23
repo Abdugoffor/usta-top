@@ -13,6 +13,7 @@ type CreateVacancyRequest struct {
 	Title       string  `json:"title" validate:"required,min=2,max=500"`
 	Text        string  `json:"text" validate:"required,min=10"`
 	Contact     string  `json:"contact" validate:"required,min=5,max=255"`
+	Telegram    *string `json:"telegram" validate:"omitempty,max=100"`
 	Price       *int64  `json:"price"`
 	IsActive    *bool   `json:"is_active"`
 	CategoryIDs []int64 `json:"category_ids" validate:"omitempty,dive,min=1"`
@@ -27,6 +28,7 @@ type UpdateVacancyRequest struct {
 	Title       *string `json:"title" validate:"omitempty,min=2,max=500"`
 	Text        *string `json:"text" validate:"omitempty,min=10"`
 	Contact     *string `json:"contact" validate:"omitempty,min=5,max=255"`
+	Telegram    *string `json:"telegram" validate:"omitempty,max=100"`
 	Price       *int64  `json:"price"`
 	IsActive    *bool   `json:"is_active"`
 	CategoryIDs []int64 `json:"category_ids" validate:"omitempty,dive,min=1"`
@@ -54,9 +56,9 @@ type VacancyFilter struct {
 // Response DTOs
 
 type CategoryShort struct {
-	ID       int64  `json:"id"`
-	Name     string `json:"name"`
-	IsActive bool   `json:"is_active"`
+	ID       int64             `json:"id"`
+	Name     map[string]string `json:"name"`
+	IsActive bool              `json:"is_active"`
 }
 
 type VacancyResponse struct {
@@ -74,6 +76,7 @@ type VacancyResponse struct {
 	Title        *string         `json:"title"`
 	Text         *string         `json:"text"`
 	Contact      *string         `json:"contact"`
+	Telegram     *string         `json:"telegram"`
 	Price        *int64          `json:"price"`
 	ViewsCount   *int64          `json:"views_count"`
 	IsActive     *bool           `json:"is_active"`

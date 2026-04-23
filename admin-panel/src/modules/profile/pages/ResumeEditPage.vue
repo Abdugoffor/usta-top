@@ -7,14 +7,16 @@ import { getResume, updateResume } from '@/modules/client/api/resumeApi'
 import { getCategories } from '@/modules/category/api/categoryApi'
 import { getCountries } from '@/modules/country/api/countryApi'
 import ClientHeader from '@/modules/client/components/ClientHeader.vue'
+import { useI18n } from '@/shared/composables/useI18n'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+const { t, langName } = useI18n()
 
 const resumeId = ref(null)
 const form = ref({
-  name: '', title: '', adress: '', text: '', contact: '',
+  name: '', title: '', adress: '', text: '', contact: '', telegram: '',
   photo: '', skills: '', price: '', experience_year: '',
   region_id: null, district_id: null, mahalla_id: null,
   is_active: true, category_ids: [],
@@ -46,7 +48,7 @@ const uploadPhoto = async (e) => {
     form.value.photo = apiHost + res.data.url
     photoPreview.value = form.value.photo
   } catch (err) {
-    photoUploadError.value = err.response?.data?.error || 'Rasm yuklanmadi'
+    photoUploadError.value = err.response?.data?.error || t('photo_upload_error')
   } finally {
     photoLoading.value = false
   }
@@ -85,21 +87,20 @@ const submit = async () => {
   fieldErrors.value = {}
   loading.value = true
   try {
-    const payload = {
-      name: form.value.name,
-      title: form.value.title,
-      adress: form.value.adress,
-      text: form.value.text,
-      contact: form.value.contact,
-      photo: form.value.photo,
-      skills: form.value.skills,
-      is_active: form.value.is_active,
-    }
-    if (form.value.price) payload.price = Number(form.value.price)
+    const payload = { is_active: form.value.is_active, category_ids: form.value.category_ids }
+    if (form.value.name)    payload.name    = form.value.name
+    if (form.value.title)   payload.title   = form.value.title
+    if (form.value.adress)  payload.adress  = form.value.adress
+    if (form.value.text)    payload.text    = form.value.text
+    if (form.value.contact) payload.contact = form.value.contact
+    if (form.value.photo)   payload.photo   = form.value.photo
+    if (form.value.skills)  payload.skills  = form.value.skills
+    if (form.value.telegram) payload.telegram = form.value.telegram
+    if (form.value.price)           payload.price           = Number(form.value.price)
     if (form.value.experience_year) payload.experience_year = Number(form.value.experience_year)
-    if (form.value.region_id) payload.region_id = form.value.region_id
-    if (form.value.district_id) payload.district_id = form.value.district_id
-    if (form.value.mahalla_id) payload.mahalla_id = form.value.mahalla_id
+    if (form.value.region_id)       payload.region_id       = form.value.region_id
+    if (form.value.district_id)     payload.district_id     = form.value.district_id
+    if (form.value.mahalla_id)      payload.mahalla_id      = form.value.mahalla_id
 
     await updateResume(resumeId.value, payload)
     router.push({ name: 'profile' })
@@ -129,6 +130,7 @@ onMounted(async () => {
       adress: r.adress || '',
       text: r.text || '',
       contact: r.contact || '',
+      telegram: r.telegram || '',
       photo: r.photo || '',
       skills: r.skills || '',
       price: r.price || '',
@@ -172,10 +174,10 @@ onMounted(async () => {
         <div class="create-hero__inner">
           <RouterLink :to="`/${route.params.lang}/profile`" class="create-back">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
-            Profilga qaytish
+            {{ t('profile_back') }}
           </RouterLink>
-          <h1>Resumeni tahrirlash</h1>
-          <p>Ma'lumotlarni yangilang</p>
+          <h1>{{ t('resume_edit_title') }}</h1>
+          <p>{{ t('form_update_info') }}</p>
         </div>
       </div>
 
@@ -187,29 +189,34 @@ onMounted(async () => {
             <div class="form-section">
               <h3 class="form-section__title">
                 <span class="form-section__num">1</span>
-                Asosiy ma'lumotlar
+                {{ t('form_section_basic') }}
               </h3>
               <div class="form-grid">
                 <div class="form-field" :class="{ 'form-field--error': fieldErrors.name }">
-                  <label>To'liq ism <span class="req">*</span></label>
+                  <label>{{ t('field_full_name') }} <span class="req">*</span></label>
                   <input v-model="form.name" type="text" placeholder="Abdullayev Alisher" required />
                   <span v-if="fieldErrors.name" class="form-field__err">{{ fieldErrors.name }}</span>
                 </div>
                 <div class="form-field" :class="{ 'form-field--error': fieldErrors.title }">
-                  <label>Kasb / Mutaxassislik <span class="req">*</span></label>
+                  <label>{{ t('field_profession') }} <span class="req">*</span></label>
                   <input v-model="form.title" type="text" placeholder="Elektrik usta, 10 yil tajriba" required />
                   <span v-if="fieldErrors.title" class="form-field__err">{{ fieldErrors.title }}</span>
                 </div>
                 <div class="form-field" :class="{ 'form-field--error': fieldErrors.contact }">
-                  <label>Aloqa (telefon) <span class="req">*</span></label>
+                  <label>{{ t('field_contact') }} <span class="req">*</span></label>
                   <input v-model="form.contact" type="text" placeholder="+998 90 123 45 67" required />
                   <span v-if="fieldErrors.contact" class="form-field__err">{{ fieldErrors.contact }}</span>
+                </div>
+                <div class="form-field" :class="{ 'form-field--error': fieldErrors.telegram }">
+                  <label>{{ t('field_telegram') }}</label>
+                  <input v-model="form.telegram" type="text" placeholder="@username" />
+                  <span v-if="fieldErrors.telegram" class="form-field__err">{{ fieldErrors.telegram }}</span>
                 </div>
               </div>
 
               <!-- Rasm yuklash -->
               <div class="form-field form-field--full" :class="{ 'form-field--error': fieldErrors.photo || photoUploadError }">
-                <label>Rasm <span class="req">*</span></label>
+                <label>{{ t('field_photo') }} <span class="req">*</span></label>
                 <label class="photo-upload-area" :class="{ 'photo-upload-area--has': photoPreview, 'photo-upload-area--loading': photoLoading }">
                   <input
                     type="file"
@@ -221,7 +228,7 @@ onMounted(async () => {
                   <template v-if="photoLoading">
                     <div class="photo-state">
                       <div class="photo-spinner"></div>
-                      <span>Yuklanmoqda...</span>
+                      <span>{{ t('loading') }}</span>
                     </div>
                   </template>
                   <template v-else-if="photoPreview">
@@ -232,7 +239,7 @@ onMounted(async () => {
                         <polyline points="17 8 12 3 7 8"/>
                         <line x1="12" y1="3" x2="12" y2="15"/>
                       </svg>
-                      <span>O'zgartirish</span>
+                      <span>{{ t('photo_change') }}</span>
                     </div>
                   </template>
                   <template v-else>
@@ -242,8 +249,8 @@ onMounted(async () => {
                         <circle cx="8.5" cy="8.5" r="1.5"/>
                         <polyline points="21 15 16 10 5 21"/>
                       </svg>
-                      <span class="photo-state__title">Rasm yuklash</span>
-                      <span class="photo-state__hint">JPEG, PNG, GIF, WEBP · max 3 MB</span>
+                      <span class="photo-state__title">{{ t('photo_upload') }}</span>
+                      <span class="photo-state__hint">{{ t('photo_hint') }}</span>
                     </div>
                   </template>
                 </label>
@@ -253,24 +260,24 @@ onMounted(async () => {
 
               <div class="form-grid">
                 <div class="form-field" :class="{ 'form-field--error': fieldErrors.price }">
-                  <label>Narx (so'm / oyiga)</label>
+                  <label>{{ t('field_price_monthly') }}</label>
                   <input v-model="form.price" type="number" placeholder="3000000" min="0" />
                 </div>
                 <div class="form-field">
-                  <label>Tajriba (yil)</label>
+                  <label>{{ t('field_experience_year') }}</label>
                   <input v-model="form.experience_year" type="number" placeholder="5" min="0" max="60" />
                 </div>
               </div>
 
               <div class="form-field form-field--full" :class="{ 'form-field--error': fieldErrors.skills }">
-                <label>Ko'nikmalar <span class="req">*</span></label>
+                <label>{{ t('field_skills') }} <span class="req">*</span></label>
                 <input v-model="form.skills" type="text" placeholder="Excel, Word, Elektr o'rnatish" required />
-                <span class="form-field__hint">Vergul bilan ajrating</span>
+                <span class="form-field__hint">{{ t('field_skills_hint') }}</span>
                 <span v-if="fieldErrors.skills" class="form-field__err">{{ fieldErrors.skills }}</span>
               </div>
 
               <div class="form-field form-field--full" :class="{ 'form-field--error': fieldErrors.text }">
-                <label>O'zim haqimda <span class="req">*</span></label>
+                <label>{{ t('field_about') }} <span class="req">*</span></label>
                 <textarea v-model="form.text" rows="5" placeholder="Tajribangiz haqida..." required></textarea>
                 <span v-if="fieldErrors.text" class="form-field__err">{{ fieldErrors.text }}</span>
               </div>
@@ -279,32 +286,32 @@ onMounted(async () => {
             <div class="form-section">
               <h3 class="form-section__title">
                 <span class="form-section__num">2</span>
-                Joylashuv
+                {{ t('form_section_location') }}
               </h3>
               <div class="form-grid">
                 <div class="form-field">
-                  <label>Viloyat</label>
+                  <label>{{ t('field_region') }}</label>
                   <select :value="form.region_id || ''" @change="selectRegion($event.target.value)">
-                    <option value="">Tanlang</option>
+                    <option value="">{{ t('option_select') }}</option>
                     <option v-for="r in regions" :key="r.id" :value="r.id">{{ r.name }}</option>
                   </select>
                 </div>
                 <div class="form-field" v-if="districts.length">
-                  <label>Tuman</label>
+                  <label>{{ t('field_district') }}</label>
                   <select :value="form.district_id || ''" @change="selectDistrict($event.target.value)">
-                    <option value="">Tanlang</option>
+                    <option value="">{{ t('option_select') }}</option>
                     <option v-for="d in districts" :key="d.id" :value="d.id">{{ d.name }}</option>
                   </select>
                 </div>
                 <div class="form-field" v-if="mahallas.length">
-                  <label>Mahalla</label>
+                  <label>{{ t('field_mahalla') }}</label>
                   <select :value="form.mahalla_id || ''" @change="form.mahalla_id = $event.target.value ? Number($event.target.value) : null">
-                    <option value="">Tanlang</option>
+                    <option value="">{{ t('option_select') }}</option>
                     <option v-for="m in mahallas" :key="m.id" :value="m.id">{{ m.name }}</option>
                   </select>
                 </div>
                 <div class="form-field form-field--full" :class="{ 'form-field--error': fieldErrors.adress }">
-                  <label>To'liq manzil <span class="req">*</span></label>
+                  <label>{{ t('field_address') }} <span class="req">*</span></label>
                   <input v-model="form.adress" type="text" placeholder="Toshkent, Chilonzor tumani..." required />
                   <span v-if="fieldErrors.adress" class="form-field__err">{{ fieldErrors.adress }}</span>
                 </div>
@@ -314,13 +321,13 @@ onMounted(async () => {
             <div class="form-section" v-if="categories.length">
               <h3 class="form-section__title">
                 <span class="form-section__num">3</span>
-                Kategoriyalar
+                {{ t('form_section_categories') }}
               </h3>
               <div class="cat-chips">
                 <button v-for="cat in categories" :key="cat.id" type="button" class="cat-chip"
                   :class="{ 'cat-chip--active': form.category_ids.includes(cat.id) }"
                   @click="toggleCategory(cat.id)">
-                  {{ cat.name }}
+                  {{ langName(cat.name) }}
                 </button>
               </div>
             </div>
@@ -328,12 +335,12 @@ onMounted(async () => {
             <div class="form-section">
               <h3 class="form-section__title">
                 <span class="form-section__num">{{ categories.length ? '4' : '3' }}</span>
-                Holat
+                {{ t('form_section_status') }}
               </h3>
               <label class="toggle-row">
                 <div>
-                  <div class="toggle-row__label">Resumeni faol qilish</div>
-                  <div class="toggle-row__sub">Faol bo'lsa, boshqalar ko'rishi mumkin</div>
+                  <div class="toggle-row__label">{{ t('resume_activate_label') }}</div>
+                  <div class="toggle-row__sub">{{ t('resume_activate_hint') }}</div>
                 </div>
                 <label class="toggle-switch">
                   <input type="checkbox" v-model="form.is_active" />
@@ -343,10 +350,10 @@ onMounted(async () => {
             </div>
 
             <div class="form-actions">
-              <RouterLink :to="`/${route.params.lang}/profile`" class="form-cancel">Bekor qilish</RouterLink>
+              <RouterLink :to="`/${route.params.lang}/profile`" class="form-cancel">{{ t('action_cancel') }}</RouterLink>
               <button type="submit" class="form-submit" :disabled="loading || photoLoading">
                 <span v-if="loading" class="btn-spinner"></span>
-                {{ loading ? 'Saqlanmoqda...' : 'O\'zgarishlarni saqlash' }}
+                {{ loading ? t('saving') : t('action_save_changes') }}
               </button>
             </div>
           </form>
