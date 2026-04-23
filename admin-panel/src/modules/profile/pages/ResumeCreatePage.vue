@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/modules/auth/store/authStore'
 import axios from '@/app/providers/axios'
 import { getCategories } from '@/modules/category/api/categoryApi'
@@ -8,6 +8,7 @@ import { getCountries } from '@/modules/country/api/countryApi'
 import ClientHeader from '@/modules/client/components/ClientHeader.vue'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 
 const form = ref({
@@ -138,7 +139,7 @@ onMounted(async () => {
 
     <div class="create-hero">
       <div class="create-hero__inner">
-        <RouterLink to="/profile" class="create-back">
+        <RouterLink :to="`/${route.params.lang}/profile`" class="create-back">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="m15 18-6-6 6-6"/>
           </svg>
@@ -320,7 +321,7 @@ onMounted(async () => {
           </div>
 
           <div class="form-actions">
-            <RouterLink to="/profile" class="form-cancel">Bekor qilish</RouterLink>
+            <RouterLink :to="`/${route.params.lang}/profile`" class="form-cancel">Bekor qilish</RouterLink>
             <button type="submit" class="form-submit" :disabled="loading || photoLoading || !form.photo">
               <span v-if="loading" class="btn-spinner"></span>
               {{ loading ? 'Saqlanmoqda...' : 'Resume saqlash' }}

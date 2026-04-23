@@ -24,12 +24,46 @@ func NewTranslationHandler(router *httprouter.Router, group string, db *pgxpool.
 
 	routes := group + "/translations"
 	{
-		router.POST(routes, h.Create)
+		router.POST(routes, middleware.CheckRole(h.Create))
 		router.GET(routes, h.List)
 		router.GET(routes+"/:id", h.GetByID)
-		router.PUT(routes+"/:id", h.Update)
+		router.PUT(routes+"/:id", middleware.CheckRole(h.Update))
 		router.DELETE(routes+"/:id", middleware.CheckRole(h.Delete))
 	}
+
+	// Frontend uchun public endpoint: GET /api/v1/t?key=slug&lang=uz
+	router.GET(group+"/t", h.GetTranslation)
+}
+
+// GetTranslation godoc
+// @Summary      Frontend uchun tarjima olish
+// @Description  key (slug) va lang bo'yicha tarjimani qaytaradi. lang yo'q bo'lsa default ishlatiladi. Agar tarjima topilmasa key qaytariladi.
+// @Tags         Translations
+// @Produce      json
+// @Param        key   query     string  true   "Translation slug (kalit)"
+// @Param        lang  query     string  false  "Til kodi (uz, ru, en ...)"
+// @Success      200   {object}  translation_dto.TranslationKeyResponse
+// @Failure      400   {object}  map[string]string
+// @Router       /t [get]
+func (h *translationHandler) GetTranslation(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	key := strings.TrimSpace(r.URL.Query().Get("key"))
+	if key == "" {
+		helper.WriteError(w, http.StatusBadRequest, "key is required")
+		return
+	}
+
+	lang := strings.TrimSpace(r.URL.Query().Get("lang"))
+	if lang == "" {
+		lang = "default"
+	}
+
+	value := h.service.GetTranslation(r.Context(), key, lang)
+
+	helper.WriteJSON(w, http.StatusOK, translation_dto.TranslationKeyResponse{
+		Key:   key,
+		Value: value,
+		Lang:  lang,
+	})
 }
 
 // Create godoc
@@ -46,11 +80,9 @@ func NewTranslationHandler(router *httprouter.Router, group string, db *pgxpool.
 // @Router       /translations [post]
 func (h *translationHandler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var req translation_dto.CreateTranslationRequest
-	{
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			helper.WriteError(w, http.StatusBadRequest, "invalid JSON")
-			return
-		}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		helper.WriteError(w, http.StatusBadRequest, "invalid JSON")
+		return
 	}
 
 	req.Slug = strings.TrimSpace(req.Slug)
@@ -169,11 +201,9 @@ func (h *translationHandler) Update(w http.ResponseWriter, r *http.Request, ps h
 	}
 
 	var req translation_dto.UpdateTranslationRequest
-	{
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			helper.WriteError(w, http.StatusBadRequest, "invalid JSON")
-			return
-		}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		helper.WriteError(w, http.StatusBadRequest, "invalid JSON")
+		return
 	}
 
 	if req.Slug != nil {

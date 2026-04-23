@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import SharePanel from '@/shared/components/SharePanel.vue'
+import { useI18n } from '@/shared/composables/useI18n'
 
 const props = defineProps({
   item: { type: Object, required: true }
@@ -9,6 +10,7 @@ const props = defineProps({
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 
 const initials = computed(() => {
   const name = props.item.name || props.item.title || ''
@@ -37,18 +39,18 @@ const timeAgo = computed(() => {
   const date = new Date(props.item.created_at)
   const now = new Date()
   const diff = Math.floor((now - date) / 1000)
-  if (diff < 3600) return `${Math.floor(diff/60)} daqiqa oldin`
-  if (diff < 86400) return `${Math.floor(diff/3600)} soat oldin`
-  return `${Math.floor(diff/86400)} kun oldin`
+  if (diff < 3600) return `${Math.floor(diff/60)} ${t('time_minutes_ago')}`
+  if (diff < 86400) return `${Math.floor(diff/3600)} ${t('time_hours_ago')}`
+  return `${Math.floor(diff/86400)} ${t('time_days_ago')}`
 })
 
-const itemUrl = computed(() => `${window.location.origin}/vacancies/${props.item.slug}`)
+const itemUrl = computed(() => `${window.location.origin}/${route.params.lang}/vacancies/${props.item.slug}`)
 
 const goDetail = () => {
   if (props.item.slug) {
     router.push({
       name: 'vacancy-detail',
-      params: { slug: props.item.slug },
+      params: { lang: route.params.lang, slug: props.item.slug },
       query: { ...route.query },
     })
   }
@@ -68,7 +70,7 @@ const goDetail = () => {
         <p class="vacancy-card__subtitle">{{ item.title !== item.name ? item.title : '' }}</p>
       </div>
       <span class="vacancy-card__badge" :class="item.is_active ? 'badge--active' : 'badge--inactive'">
-        {{ item.is_active ? 'Faol' : 'Yopiq' }}
+        {{ item.is_active ? t('status_active') : t('status_inactive') }}
       </span>
     </div>
 
@@ -83,7 +85,7 @@ const goDetail = () => {
         {{ location }}
       </span>
       <div class="vacancy-card__bottom">
-        <span v-if="price" class="vacancy-card__price">{{ price }} so'm</span>
+        <span v-if="price" class="vacancy-card__price">{{ price }} {{ t('price_sum') }}</span>
         <div class="vacancy-card__actions">
           <span v-if="timeAgo" class="vacancy-card__time">{{ timeAgo }}</span>
           <SharePanel :url="itemUrl" :title="item.name || item.title" :phone="item.contact" />

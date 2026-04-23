@@ -28,3 +28,10 @@ type TranslationFilter struct {
 	Name     string `json:"name"`
 	IsActive *bool  `json:"is_active"`
 }
+
+// TranslationKeyResponse — frontend uchun bitta kalit bo'yicha tarjima
+type TranslationKeyResponse struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+	Lang  string `json:"lang"`
+}

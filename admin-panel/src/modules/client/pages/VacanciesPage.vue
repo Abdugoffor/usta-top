@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ClientHeader from '../components/ClientHeader.vue'
 import FilterSidebar from '../components/FilterSidebar.vue'
@@ -7,15 +8,17 @@ import { getVacancies } from '../api/vacancyApi'
 import { getResumes } from '../api/resumeApi'
 import { useClientListingPage } from '../composables/useClientListingPage'
 import { formatNumber } from '@/shared/utils/formatNumber'
+import { useI18n } from '@/shared/composables/useI18n'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 
-const sortOptions = [
-  { value: 'newest', label: 'Eng yangi' },
-  { value: 'price_asc', label: 'Narx ↑' },
-  { value: 'price_desc', label: 'Narx ↓' },
-]
+const sortOptions = computed(() => [
+  { value: 'newest', label: t('sort_newest') },
+  { value: 'price_asc', label: t('sort_price_asc') },
+  { value: 'price_desc', label: t('sort_price_desc') },
+])
 
 const syncToUrl = ({ filters, sortBy, router }) => {
   const q = {}
@@ -118,8 +121,8 @@ const {
 
     <section class="client-hero">
       <div class="client-hero__inner">
-        <h1 class="client-hero__title">O'zbekistondagi eng yaxshi<br />ish e'lonlarini toping</h1>
-        <p class="client-hero__sub">Kompaniyalar va tadbirkorlar tomonidan e'lon qilingan vakansiyalar</p>
+        <h1 class="client-hero__title">{{ t('hero_title_vacancies_1') }}<br />{{ t('hero_title_vacancies_2') }}</h1>
+        <p class="client-hero__sub">{{ t('hero_sub_vacancies') }}</p>
       </div>
     </section>
 
@@ -136,7 +139,7 @@ const {
           </div>
           <div class="client-stats-card__body">
             <div class="client-stats-card__number client-stats-card__number--accent">{{ formatNumber(totalMasters) }}</div>
-            <div class="client-stats-card__label">Usta / Mutaxassis</div>
+            <div class="client-stats-card__label">{{ t('stat_masters') }}</div>
           </div>
           <svg class="client-stats-card__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="m9 18 6-6-6-6" />
@@ -152,7 +155,7 @@ const {
           </div>
           <div class="client-stats-card__body">
             <div class="client-stats-card__number">{{ formatNumber(totalVacancies) }}</div>
-            <div class="client-stats-card__label">Ish e'loni</div>
+            <div class="client-stats-card__label">{{ t('stat_vacancies') }}</div>
           </div>
         </div>
       </div>
@@ -173,7 +176,7 @@ const {
         <div class="client-results">
           <div class="client-toolbar">
             <span class="client-toolbar__count">
-              <strong>{{ formatNumber(totalVacancies) }}</strong> ta vakansiya
+              <strong>{{ formatNumber(totalVacancies) }}</strong> {{ t('toolbar_vacancies_count') }}
             </span>
 
             <div class="client-toolbar__actions">
@@ -181,7 +184,7 @@ const {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                   <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
                 </svg>
-                Filtr
+                {{ t('filter_btn') }}
                 <span v-if="activeFilterCount > 0" class="client-filter-toggle__badge">{{ activeFilterCount }}</span>
               </button>
 
@@ -208,8 +211,8 @@ const {
 
             <div v-else class="client-empty">
               <div class="client-empty__icon">📋</div>
-              <h3>Vakansiya topilmadi</h3>
-              <p>Filtrlarni o'zgartirib ko'ring</p>
+              <h3>{{ t('empty_vacancies') }}</h3>
+              <p>{{ t('empty_hint') }}</p>
             </div>
           </template>
 
@@ -225,13 +228,13 @@ const {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                   <path d="M12 5v14M5 12l7 7 7-7"/>
                 </svg>
-                Ko'proq yuklash
+                {{ t('load_more') }}
               </template>
             </button>
           </div>
 
           <div v-if="!hasMore && vacancies.length > 0 && !loading" class="client-end">
-            Barcha vakansiyalar ko'rsatildi
+            {{ t('all_shown_vacancies') }}
           </div>
         </div>
       </div>

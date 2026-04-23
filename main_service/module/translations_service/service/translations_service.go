@@ -19,6 +19,8 @@ type TranslationService interface {
 	Update(ctx context.Context, id int64, req translation_dto.UpdateTranslationRequest) (*translation_dto.TranslationResponse, error)
 	Delete(ctx context.Context, id int64) error
 	List(ctx context.Context, f translation_dto.TranslationFilter, afterID int64, limit int) ([]*translation_dto.TranslationResponse, bool, error)
+	// GetTranslation — frontend uchun: key+lang bo'yicha qidiradi, fallback logikasi bilan qaytaradi
+	GetTranslation(ctx context.Context, slug, lang string) string
 }
 
 // ─── Implementation ──────────────────────────────────────────────────────────
@@ -70,6 +72,15 @@ func (s *translationService) getActiveLangCodes(ctx context.Context) ([]string, 
 	return codes, rows.Err()
 }
 
+// normalizeName — barcha kalitlarni kichik harfga keltiradi
+func normalizeName(name map[string]string) map[string]string {
+	result := make(map[string]string, len(name))
+	for k, v := range name {
+		result[strings.ToLower(k)] = v
+	}
+	return result
+}
+
 func filterName(name map[string]string, activeLangs []string) map[string]string {
 	allowed := make(map[string]bool, len(activeLangs)+1)
 	allowed["default"] = true
@@ -86,6 +97,40 @@ func filterName(name map[string]string, activeLangs []string) map[string]string 
 	return result
 }
 
+// ─── GetTranslation ──────────────────────────────────────────────────────────
+// Laravel getTranslation() mantiqiga mos:
+//  1. slug bo'yicha qidiradi
+//  2. name[lang] bo'lsa — shu qiymatni qaytaradi
+//  3. bo'lmasa name["default"] ni qaytaradi
+//  4. default ham bo'lmasa — slug (keyni o'zini) qaytaradi
+
+func (s *translationService) GetTranslation(ctx context.Context, slug, lang string) string {
+	var nameBytes []byte
+	err := s.db.QueryRow(ctx, `
+		SELECT name FROM translations
+		WHERE slug = $1 AND deleted_at IS NULL AND is_active = true
+	`, slug).Scan(&nameBytes)
+	if err != nil {
+		// tarjima topilmasa — keyni o'zini qaytaradi
+		return slug
+	}
+
+	var name map[string]string
+	if err := json.Unmarshal(nameBytes, &name); err != nil {
+		return slug
+	}
+
+	if v, ok := name[strings.ToLower(lang)]; ok && strings.TrimSpace(v) != "" {
+		return v
+	}
+
+	if v, ok := name["default"]; ok && strings.TrimSpace(v) != "" {
+		return v
+	}
+
+	return slug
+}
+
 // ─── Create ──────────────────────────────────────────────────────────────────
 
 func (s *translationService) Create(ctx context.Context, req translation_dto.CreateTranslationRequest) (*translation_dto.TranslationResponse, error) {
@@ -100,7 +145,7 @@ func (s *translationService) Create(ctx context.Context, req translation_dto.Cre
 		isActive = *req.IsActive
 	}
 
-	nameJSON, err := json.Marshal(req.Name)
+	nameJSON, err := json.Marshal(normalizeName(req.Name))
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +219,7 @@ func (s *translationService) Update(ctx context.Context, id int64, req translati
 			return nil, err
 		}
 
-		nameJSON, err := json.Marshal(*req.Name)
+		nameJSON, err := json.Marshal(normalizeName(*req.Name))
 		if err != nil {
 			return nil, err
 		}
@@ -245,14 +290,12 @@ func (s *translationService) List(ctx context.Context, f translation_dto.Transla
 	}
 
 	if f.Name != "" {
-		conditions = append(conditions, fmt.Sprintf(`
-			(
+		conditions = append(conditions, fmt.Sprintf(`(
 				t.name->>'default' ILIKE $%d OR
 				t.name->>'uz' ILIKE $%d OR
 				t.name->>'ru' ILIKE $%d OR
 				t.name->>'en' ILIKE $%d
-			)
-		`, idx, idx, idx, idx))
+			)`, idx, idx, idx, idx))
 		args = append(args, "%"+f.Name+"%")
 		idx++
 	}

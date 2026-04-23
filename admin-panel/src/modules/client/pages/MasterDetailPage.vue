@@ -4,9 +4,11 @@ import { useRoute, useRouter } from 'vue-router'
 import ClientHeader from '../components/ClientHeader.vue'
 import SharePanel from '@/shared/components/SharePanel.vue'
 import { getResume } from '../api/resumeApi'
+import { useI18n } from '@/shared/composables/useI18n'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 const master = ref(null)
 const loading = ref(true)
 const search = ref('')
@@ -47,7 +49,7 @@ onMounted(async () => {
     const res = await getResume(route.params.slug)
     master.value = res.data
   } catch {
-    router.push('/')
+    router.push({ name: 'home' })
   } finally {
     loading.value = false
   }
@@ -68,7 +70,7 @@ onMounted(async () => {
           <div class="detail-hero__nav">
             <button class="detail-back" @click="goBack">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
-              Orqaga
+              {{ t('btn_back') }}
             </button>
             <SharePanel :url="pageUrl" :title="master.name" :phone="master.contact" :dark="true" />
           </div>
@@ -77,7 +79,7 @@ onMounted(async () => {
             <div class="detail-hero__info">
               <div class="detail-hero__badges">
                 <span class="detail-badge" :class="master.is_active ? 'detail-badge--active' : 'detail-badge--inactive'">
-                  {{ master.is_active ? 'Faol' : 'Yopiq' }}
+                  {{ master.is_active ? t('status_active') : t('status_inactive') }}
                 </span>
                 <span v-if="master.category_name" class="detail-badge detail-badge--blue">{{ master.category_name }}</span>
               </div>
@@ -95,20 +97,20 @@ onMounted(async () => {
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                   </svg>
-                  {{ master.experience_year }} yil tajriba
+                  {{ master.experience_year }} {{ t('label_years_experience') }}
                 </span>
                 <span v-if="master.views_count">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                     <circle cx="12" cy="12" r="3"/>
                   </svg>
-                  {{ master.views_count }} ko'rish
+                  {{ master.views_count }} {{ t('label_views_count') }}
                 </span>
               </div>
             </div>
             <div class="detail-hero__price-box">
-              <div class="detail-hero__price-label">Kunlik narx</div>
-              <div class="detail-hero__price">{{ price ? price + ' so\'m' : 'Kelishiladi' }}</div>
+              <div class="detail-hero__price-label">{{ t('label_daily_price') }}</div>
+              <div class="detail-hero__price">{{ price ? price + ' ' + t('price_sum') : t('price_negotiable') }}</div>
               <a v-if="master.contact" :href="'tel:' + master.contact" class="detail-hero__contact-btn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.78A16 16 0 0 0 15 15.87l.85-.85a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
@@ -124,19 +126,19 @@ onMounted(async () => {
         <div class="detail-body__inner">
           <div class="detail-main">
             <div v-if="master.text" class="detail-section">
-              <h2 class="detail-section__title">O'zim haqimda</h2>
+              <h2 class="detail-section__title">{{ t('section_about_me') }}</h2>
               <p class="detail-section__text">{{ master.text }}</p>
             </div>
 
             <div v-if="skills.length" class="detail-section">
-              <h2 class="detail-section__title">Ko'nikmalar</h2>
+              <h2 class="detail-section__title">{{ t('section_skills') }}</h2>
               <div class="detail-skills">
                 <span v-for="s in skills" :key="s" class="detail-skill">{{ s }}</span>
               </div>
             </div>
 
             <div v-if="master.adress" class="detail-section">
-              <h2 class="detail-section__title">Manzil</h2>
+              <h2 class="detail-section__title">{{ t('section_address') }}</h2>
               <p class="detail-section__text">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;display:inline;vertical-align:middle;margin-right:4px">
                   <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
@@ -149,7 +151,7 @@ onMounted(async () => {
 
           <aside class="detail-aside">
             <div class="detail-aside__card">
-              <h3 class="detail-aside__title">Aloqa ma'lumotlari</h3>
+              <h3 class="detail-aside__title">{{ t('section_contact_info') }}</h3>
               <a v-if="master.contact" :href="'tel:' + master.contact" class="detail-aside__row detail-aside__phone">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.78A16 16 0 0 0 15 15.87l.85-.85a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
@@ -168,17 +170,17 @@ onMounted(async () => {
             <div class="detail-aside__card detail-aside__stats">
               <div class="detail-aside__stat">
                 <div class="detail-aside__stat-val">{{ master.experience_year || 0 }}</div>
-                <div class="detail-aside__stat-label">Yil tajriba</div>
+                <div class="detail-aside__stat-label">{{ t('stat_years_experience') }}</div>
               </div>
               <div class="detail-aside__stat">
                 <div class="detail-aside__stat-val">{{ master.views_count || 0 }}</div>
-                <div class="detail-aside__stat-label">Ko'rish</div>
+                <div class="detail-aside__stat-label">{{ t('stat_views') }}</div>
               </div>
               <div class="detail-aside__stat">
                 <div class="detail-aside__stat-val" :class="master.is_active ? 'text--green' : 'text--gray'">
-                  {{ master.is_active ? 'Faol' : 'Yopiq' }}
+                  {{ master.is_active ? t('status_active') : t('status_inactive') }}
                 </div>
-                <div class="detail-aside__stat-label">Holat</div>
+                <div class="detail-aside__stat-label">{{ t('stat_status') }}</div>
               </div>
             </div>
           </aside>

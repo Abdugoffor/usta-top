@@ -1,9 +1,10 @@
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../store/authStore'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 
 const form = ref({
@@ -32,7 +33,7 @@ const submit = async () => {
 <template>
   <div class="auth-page">
     <div class="auth-card">
-      <RouterLink to="/" class="auth-logo">
+      <RouterLink :to="`/${route.params.lang || 'uz'}`" class="auth-logo">
         <div class="auth-logo__box">UT</div>
         <span>UstaTop</span>
       </RouterLink>
@@ -105,7 +106,7 @@ const submit = async () => {
 
       <p class="auth-switch">
         Hisobingiz bormi?
-        <RouterLink to="/login">Kirish</RouterLink>
+        <RouterLink :to="`/${route.params.lang || 'uz'}/login`">Kirish</RouterLink>
       </p>
     </div>
   </div>

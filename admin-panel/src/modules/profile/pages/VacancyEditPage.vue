@@ -150,7 +150,7 @@ onMounted(async () => {
     <template v-else>
       <div class="create-hero">
         <div class="create-hero__inner">
-          <RouterLink to="/profile" class="create-back">
+          <RouterLink :to="`/${route.params.lang}/profile`" class="create-back">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
             Profilga qaytish
           </RouterLink>
@@ -270,7 +270,7 @@ onMounted(async () => {
             </div>
 
             <div class="form-actions">
-              <RouterLink to="/profile" class="form-cancel">Bekor qilish</RouterLink>
+              <RouterLink :to="`/${route.params.lang}/profile`" class="form-cancel">Bekor qilish</RouterLink>
               <button type="submit" class="form-submit" :disabled="loading">
                 <span v-if="loading" class="btn-spinner"></span>
                 {{ loading ? 'Saqlanmoqda...' : "O'zgarishlarni saqlash" }}

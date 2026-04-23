@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import SharePanel from '@/shared/components/SharePanel.vue'
+import { useI18n } from '@/shared/composables/useI18n'
 
 const props = defineProps({
   item: { type: Object, required: true }
@@ -9,6 +10,7 @@ const props = defineProps({
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 
 const initials = computed(() => {
   const name = props.item.name || ''
@@ -32,13 +34,13 @@ const location = computed(() => {
   return parts.join(', ') || props.item.adress || ''
 })
 
-const itemUrl = computed(() => `${window.location.origin}/masters/${props.item.slug}`)
+const itemUrl = computed(() => `${window.location.origin}/${route.params.lang}/masters/${props.item.slug}`)
 
 const goDetail = () => {
   if (props.item.slug) {
     router.push({
       name: 'master-detail',
-      params: { slug: props.item.slug },
+      params: { lang: route.params.lang, slug: props.item.slug },
       query: { ...route.query },
     })
   }
@@ -56,7 +58,7 @@ const goDetail = () => {
         <p class="master-card__title">{{ item.title }}</p>
       </div>
       <span class="master-card__badge" :class="item.is_active ? 'badge--active' : 'badge--inactive'">
-        {{ item.is_active ? 'Faol' : 'Yopiq' }}
+        {{ item.is_active ? t('status_active') : t('status_inactive') }}
       </span>
     </div>
 
@@ -78,9 +80,9 @@ const goDetail = () => {
         </span>
       </div>
       <div class="master-card__bottom">
-        <span v-if="price" class="master-card__price">{{ price }} so'm</span>
+        <span v-if="price" class="master-card__price">{{ price }} {{ t('price_sum') }}</span>
         <div class="master-card__actions">
-          <span v-if="item.experience_year" class="master-card__exp">{{ item.experience_year }} yil tajriba</span>
+          <span v-if="item.experience_year" class="master-card__exp">{{ item.experience_year }} {{ t('label_years_experience') }}</span>
           <SharePanel :url="itemUrl" :title="item.name" :phone="item.contact" />
         </div>
       </div>

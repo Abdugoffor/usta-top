@@ -2,6 +2,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { getCategories } from '@/modules/category/api/categoryApi'
 import { getCountries } from '@/modules/country/api/countryApi'
+import { useI18n } from '@/shared/composables/useI18n'
 
 const props = defineProps({
   modelValue: { type: Object, required: true },
@@ -9,6 +10,8 @@ const props = defineProps({
   mobileOpen: { type: Boolean, default: false }
 })
 const emit = defineEmits(['update:modelValue', 'apply', 'close'])
+
+const { t, langName } = useI18n()
 
 const categories = ref([])
 const regions = ref([])
@@ -19,18 +22,9 @@ const regionRequestVersion = ref(0)
 const districtRequestVersion = ref(0)
 
 const CATEGORY_ICONS = {
-  Elektrik: '⚡',
-  Santexnik: '🔧',
-  Qurilish: '🏗️',
-  Duradgor: '🪚',
-  "Bo'yoqchi": '🖌️',
-  Suvoqchi: '🧱',
-  Temirchi: '⚙️',
-  Haydovchi: '🚗',
-  Konditsioner: '❄️',
-  Kompyuter: '💻',
-  Tikuvchi: '🧵',
-  Oshpaz: '👨‍🍳',
+  Elektrik: '⚡', Santexnik: '🔧', Qurilish: '🏗️', Duradgor: '🪚',
+  "Bo'yoqchi": '🖌️', Suvoqchi: '🧱', Temirchi: '⚙️', Haydovchi: '🚗',
+  Konditsioner: '❄️', Kompyuter: '💻', Tikuvchi: '🧵', Oshpaz: '👨‍🍳',
 }
 
 const CATEGORY_COLORS = [
@@ -44,13 +38,14 @@ const CATEGORY_COLORS = [
 
 const getCategoryStyle = (index) => CATEGORY_COLORS[index % CATEGORY_COLORS.length]
 
-const patchModel = (changes) => {
-  emit('update:modelValue', { ...props.modelValue, ...changes })
+// Kategoriya belgisini default nom bo'yicha topadi
+const getCategoryIcon = (category) => {
+  const name = langName(category.name)
+  return CATEGORY_ICONS[name] || '🔨'
 }
 
-const update = (key, value) => {
-  patchModel({ [key]: value })
-}
+const patchModel = (changes) => emit('update:modelValue', { ...props.modelValue, ...changes })
+const update = (key, value) => patchModel({ [key]: value })
 
 const toggleCategory = (id) => {
   const current = Array.isArray(props.modelValue.category_ids) ? [...props.modelValue.category_ids] : []
@@ -61,9 +56,8 @@ const toggleCategory = (id) => {
   emit('apply')
 }
 
-const isCategorySelected = (id) => {
-  return Array.isArray(props.modelValue.category_ids) && props.modelValue.category_ids.includes(id)
-}
+const isCategorySelected = (id) =>
+  Array.isArray(props.modelValue.category_ids) && props.modelValue.category_ids.includes(id)
 
 const findLocationName = (items, id) => {
   if (!id) return ''
@@ -71,48 +65,18 @@ const findLocationName = (items, id) => {
   return item ? item.name : ''
 }
 
-const selectRegion = (value) => {
-  patchModel({
-    region_id: value || null,
-    district_id: null,
-    mahalla_id: null,
-  })
-  emit('apply')
-}
-
-const selectDistrict = (value) => {
-  patchModel({
-    district_id: value || null,
-    mahalla_id: null,
-  })
-  emit('apply')
-}
-
-const selectMahalla = (value) => {
-  update('mahalla_id', value || null)
-  emit('apply')
-}
+const selectRegion   = (value) => { patchModel({ region_id: value || null, district_id: null, mahalla_id: null }); emit('apply') }
+const selectDistrict = (value) => { patchModel({ district_id: value || null, mahalla_id: null }); emit('apply') }
+const selectMahalla  = (value) => { update('mahalla_id', value || null); emit('apply') }
 
 const resetAll = () => {
-  emit('update:modelValue', {
-    category_ids: [],
-    region_id: null,
-    district_id: null,
-    mahalla_id: null,
-    min_price: '',
-    max_price: '',
-    is_active_filter: '',
-    search: '',
-  })
+  emit('update:modelValue', { category_ids: [], region_id: null, district_id: null, mahalla_id: null, min_price: '', max_price: '', is_active_filter: '', search: '' })
   districts.value = []
   mahallas.value = []
   emit('apply')
 }
 
-const applyAndClose = () => {
-  emit('apply')
-  emit('close')
-}
+const applyAndClose = () => { emit('apply'); emit('close') }
 
 watch(
   () => !!(props.modelValue.min_price || props.modelValue.max_price),
@@ -124,9 +88,7 @@ watch(() => props.modelValue.region_id, async (regionId) => {
   const version = ++regionRequestVersion.value
   districts.value = []
   mahallas.value = []
-
   if (!regionId) return
-
   try {
     const response = await getCountries({ parent_id: regionId, limit: 100 })
     if (version !== regionRequestVersion.value) return
@@ -140,9 +102,7 @@ watch(() => props.modelValue.region_id, async (regionId) => {
 watch(() => props.modelValue.district_id, async (districtId) => {
   const version = ++districtRequestVersion.value
   mahallas.value = []
-
   if (!districtId) return
-
   try {
     const response = await getCountries({ parent_id: districtId, limit: 100 })
     if (version !== districtRequestVersion.value) return
@@ -155,16 +115,14 @@ watch(() => props.modelValue.district_id, async (districtId) => {
 
 onMounted(async () => {
   const requests = [getCountries({ limit: 100 })]
-  if (props.showCategories) {
-    requests.unshift(getCategories({ limit: 50 }))
-  }
+  if (props.showCategories) requests.unshift(getCategories({ limit: 50 }))
 
   const responses = await Promise.all(requests)
   const categoryResponse = props.showCategories ? responses[0] : null
-  const regionResponse = props.showCategories ? responses[1] : responses[0]
+  const regionResponse   = props.showCategories ? responses[1] : responses[0]
 
   categories.value = categoryResponse?.data?.data || []
-  regions.value = regionResponse?.data?.data || []
+  regions.value    = regionResponse?.data?.data   || []
 })
 </script>
 
@@ -177,8 +135,8 @@ onMounted(async () => {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="filter-sidebar__icon">
           <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
         </svg>
-        <span>Filtr</span>
-        <button class="filter-sidebar__reset" @click="resetAll">Tozalash</button>
+        <span>{{ t('filter_title') }}</span>
+        <button class="filter-sidebar__reset" @click="resetAll">{{ t('filter_reset') }}</button>
         <button class="filter-sidebar__close-btn" @click="emit('close')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M18 6 6 18M6 6l12 12" />
@@ -186,9 +144,10 @@ onMounted(async () => {
         </button>
       </div>
 
+      <!-- Kategoriya -->
       <div v-if="showCategories" class="filter-sidebar__section">
         <div class="filter-sidebar__section-title">
-          <span>Kategoriya</span>
+          <span>{{ t('filter_category') }}</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="m18 15-6-6-6 6" />
           </svg>
@@ -203,22 +162,23 @@ onMounted(async () => {
             :style="isCategorySelected(category.id) ? {} : { background: getCategoryStyle(index).bg, color: getCategoryStyle(index).color }"
             @click="toggleCategory(category.id)"
           >
-            <span>{{ CATEGORY_ICONS[category.name] || '🔨' }}</span>
-            {{ category.name }}
+            <span>{{ getCategoryIcon(category) }}</span>
+            {{ langName(category.name) }}
           </button>
         </div>
 
         <div v-if="modelValue.category_ids?.length" class="filter-sidebar__selected-tags">
           <span v-for="categoryId in modelValue.category_ids" :key="categoryId" class="selected-tag">
-            {{ categories.find((category) => category.id === categoryId)?.name }}
+            {{ langName(categories.find((c) => c.id === categoryId)?.name) }}
             <button @click="toggleCategory(categoryId)">×</button>
           </span>
         </div>
       </div>
 
+      <!-- Joylashuv -->
       <div class="filter-sidebar__section">
         <div class="filter-sidebar__section-title">
-          <span>Joylashuv</span>
+          <span>{{ t('filter_location') }}</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="m18 15-6-6-6 6" />
           </svg>
@@ -231,7 +191,7 @@ onMounted(async () => {
               <circle cx="12" cy="9" r="2.5" />
             </svg>
             <select :value="modelValue.region_id || ''" class="filter-sidebar__select" @change="selectRegion($event.target.value || null)">
-              <option value="">Viloyat tanlang</option>
+              <option value="">{{ t('filter_select_region') }}</option>
               <option v-for="region in regions" :key="region.id" :value="region.id">{{ region.name }}</option>
             </select>
           </div>
@@ -251,7 +211,7 @@ onMounted(async () => {
               <polyline points="9 22 9 12 15 12 15 22" />
             </svg>
             <select :value="modelValue.district_id || ''" class="filter-sidebar__select" @change="selectDistrict($event.target.value || null)">
-              <option value="">Tuman</option>
+              <option value="">{{ t('filter_select_district') }}</option>
               <option v-for="district in districts" :key="district.id" :value="district.id">{{ district.name }}</option>
             </select>
           </div>
@@ -267,16 +227,17 @@ onMounted(async () => {
               <polyline points="9 22 9 12 15 12 15 22" />
             </svg>
             <select :value="modelValue.mahalla_id || ''" class="filter-sidebar__select" @change="selectMahalla($event.target.value || null)">
-              <option value="">Mahalla</option>
+              <option value="">{{ t('filter_select_mahalla') }}</option>
               <option v-for="mahalla in mahallas" :key="mahalla.id" :value="mahalla.id">{{ mahalla.name }}</option>
             </select>
           </div>
         </div>
       </div>
 
+      <!-- Narx -->
       <div class="filter-sidebar__section">
         <button class="filter-sidebar__section-title filter-sidebar__section-title--btn" @click="priceOpen = !priceOpen">
-          <span>Narx (so'm)</span>
+          <span>{{ t('filter_price') }}</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" :style="{ transform: priceOpen ? 'rotate(0)' : 'rotate(180deg)', transition: 'transform 0.2s' }">
             <path d="m18 15-6-6-6 6" />
           </svg>
@@ -284,34 +245,38 @@ onMounted(async () => {
 
         <div v-if="priceOpen" class="filter-sidebar__price">
           <div class="filter-sidebar__price-row">
-            <input class="filter-sidebar__price-input" type="number" placeholder="Min" :value="modelValue.min_price" @input="update('min_price', $event.target.value)" />
+            <input class="filter-sidebar__price-input" type="number" :placeholder="t('filter_price_min')" :value="modelValue.min_price" @input="update('min_price', $event.target.value)" />
             <span class="filter-sidebar__price-sep">—</span>
-            <input class="filter-sidebar__price-input" type="number" placeholder="Max" :value="modelValue.max_price" @input="update('max_price', $event.target.value)" />
+            <input class="filter-sidebar__price-input" type="number" :placeholder="t('filter_price_max')" :value="modelValue.max_price" @input="update('max_price', $event.target.value)" />
           </div>
-          <button class="filter-sidebar__price-apply" @click="emit('apply')">Qo'llash</button>
+          <button class="filter-sidebar__price-apply" @click="emit('apply')">{{ t('filter_apply') }}</button>
         </div>
       </div>
 
+      <!-- Holat -->
       <div class="filter-sidebar__section">
         <div class="filter-sidebar__section-title">
-          <span>Holat</span>
+          <span>{{ t('filter_status') }}</span>
         </div>
 
         <div class="filter-sidebar__status-btns">
-          <button class="status-btn" :class="{ 'status-btn--active': !modelValue.is_active_filter }" @click="update('is_active_filter', ''); emit('apply')">
-            Hammasi
+          <button class="status-btn" :class="{ 'status-btn--active': !modelValue.is_active_filter }"
+            @click="update('is_active_filter', ''); emit('apply')">
+            {{ t('filter_all') }}
           </button>
-          <button class="status-btn status-btn--green" :class="{ 'status-btn--active': modelValue.is_active_filter === 'active' }" @click="update('is_active_filter', 'active'); emit('apply')">
-            Faol
+          <button class="status-btn status-btn--green" :class="{ 'status-btn--active': modelValue.is_active_filter === 'active' }"
+            @click="update('is_active_filter', 'active'); emit('apply')">
+            {{ t('filter_active') }}
           </button>
-          <button class="status-btn status-btn--gray" :class="{ 'status-btn--active': modelValue.is_active_filter === 'inactive' }" @click="update('is_active_filter', 'inactive'); emit('apply')">
-            Yopiq
+          <button class="status-btn status-btn--gray" :class="{ 'status-btn--active': modelValue.is_active_filter === 'inactive' }"
+            @click="update('is_active_filter', 'inactive'); emit('apply')">
+            {{ t('filter_inactive') }}
           </button>
         </div>
       </div>
 
       <button class="filter-sidebar__apply-btn" @click="applyAndClose">
-        Filtrlash
+        {{ t('filter_submit') }}
       </button>
     </aside>
   </div>

@@ -4,9 +4,11 @@ import { useRoute, useRouter } from 'vue-router'
 import ClientHeader from '../components/ClientHeader.vue'
 import SharePanel from '@/shared/components/SharePanel.vue'
 import { getVacancy } from '../api/vacancyApi'
+import { useI18n } from '@/shared/composables/useI18n'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 const vacancy = ref(null)
 const loading = ref(true)
 const search = ref('')
@@ -31,9 +33,9 @@ const timeAgo = computed(() => {
   const date = new Date(vacancy.value.created_at)
   const now = new Date()
   const diff = Math.floor((now - date) / 1000)
-  if (diff < 3600) return `${Math.floor(diff/60)} daqiqa oldin`
-  if (diff < 86400) return `${Math.floor(diff/3600)} soat oldin`
-  return `${Math.floor(diff/86400)} kun oldin`
+  if (diff < 3600) return `${Math.floor(diff/60)} ${t('time_minutes_ago')}`
+  if (diff < 86400) return `${Math.floor(diff/3600)} ${t('time_hours_ago')}`
+  return `${Math.floor(diff/86400)} ${t('time_days_ago')}`
 })
 
 const pageUrl = computed(() => `${window.location.origin}/vacancies/${route.params.slug}`)
@@ -47,7 +49,7 @@ onMounted(async () => {
     const res = await getVacancy(route.params.slug)
     vacancy.value = res.data
   } catch {
-    router.push('/vacancies')
+    router.push({ name: 'vacancies' })
   } finally {
     loading.value = false
   }
@@ -68,7 +70,7 @@ onMounted(async () => {
           <div class="detail-hero__nav">
             <button class="detail-back" @click="goBack">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
-              Orqaga
+              {{ t('btn_back') }}
             </button>
             <SharePanel :url="pageUrl" :title="vacancy.name || vacancy.title" :phone="vacancy.contact" :dark="true" />
           </div>
@@ -81,7 +83,7 @@ onMounted(async () => {
             <div class="vac-detail-hero__info">
               <div class="vac-detail-hero__badges">
                 <span class="detail-badge" :class="vacancy.is_active ? 'detail-badge--active' : 'detail-badge--inactive'">
-                  {{ vacancy.is_active ? 'Faol' : 'Yopiq' }}
+                  {{ vacancy.is_active ? t('status_active') : t('status_inactive') }}
                 </span>
               </div>
               <h1 class="vac-detail-hero__name">{{ vacancy.name || vacancy.title }}</h1>
@@ -105,13 +107,13 @@ onMounted(async () => {
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                     <circle cx="12" cy="12" r="3"/>
                   </svg>
-                  {{ vacancy.views_count }} ko'rish
+                  {{ vacancy.views_count }} {{ t('label_views_count') }}
                 </span>
               </div>
             </div>
             <div class="vac-detail-hero__price-box">
-              <div class="vac-detail-hero__price-label">Maosh</div>
-              <div class="vac-detail-hero__price">{{ price ? price + ' so\'m' : 'Kelishiladi' }}</div>
+              <div class="vac-detail-hero__price-label">{{ t('label_salary') }}</div>
+              <div class="vac-detail-hero__price">{{ price ? price + ' ' + t('price_sum') : t('price_negotiable') }}</div>
               <a v-if="vacancy.contact" :href="'tel:' + vacancy.contact" class="vac-detail-contact-btn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.78A16 16 0 0 0 15 15.87l.85-.85a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
@@ -127,14 +129,14 @@ onMounted(async () => {
         <div class="vac-detail-body__inner">
           <div class="vac-detail-main">
             <div v-if="vacancy.text" class="detail-section">
-              <h2 class="detail-section__title">Vakansiya haqida</h2>
+              <h2 class="detail-section__title">{{ t('section_vacancy_about') }}</h2>
               <p class="detail-section__text">{{ vacancy.text }}</p>
             </div>
           </div>
 
           <aside class="vac-detail-aside">
             <div class="detail-aside__card">
-              <h3 class="detail-aside__title">Aloqa ma'lumotlari</h3>
+              <h3 class="detail-aside__title">{{ t('section_contact_info') }}</h3>
               <a v-if="vacancy.contact" :href="'tel:' + vacancy.contact" class="detail-aside__row detail-aside__phone">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.78A16 16 0 0 0 15 15.87l.85-.85a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
@@ -154,20 +156,20 @@ onMounted(async () => {
               <div class="vac-detail-stat-row">
                 <div class="detail-aside__stat">
                   <div class="detail-aside__stat-val">{{ vacancy.views_count || 0 }}</div>
-                  <div class="detail-aside__stat-label">Ko'rish</div>
+                  <div class="detail-aside__stat-label">{{ t('stat_views') }}</div>
                 </div>
                 <div class="detail-aside__stat">
                   <div class="detail-aside__stat-val" :class="vacancy.is_active ? 'text--green' : 'text--gray'">
-                    {{ vacancy.is_active ? 'Faol' : 'Yopiq' }}
+                    {{ vacancy.is_active ? t('status_active') : t('status_inactive') }}
                   </div>
-                  <div class="detail-aside__stat-label">Holat</div>
+                  <div class="detail-aside__stat-label">{{ t('stat_status') }}</div>
                 </div>
               </div>
             </div>
 
             <RouterLink :to="{ name: 'vacancies', query: route.query }" class="back-link">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
-              Barcha vakansiyalar
+              {{ t('link_all_vacancies') }}
             </RouterLink>
           </aside>
         </div>

@@ -1,10 +1,13 @@
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../store/authStore'
+import { useI18n } from '@/shared/composables/useI18n'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
+const { t } = useI18n()
 
 const form = ref({ phone: '', password: '' })
 const loading = ref(false)
@@ -27,19 +30,19 @@ const submit = async () => {
 <template>
   <div class="auth-page">
     <div class="auth-card">
-      <RouterLink to="/" class="auth-logo">
+      <RouterLink :to="`/${route.params.lang || 'uz'}`" class="auth-logo">
         <div class="auth-logo__box">UT</div>
         <span>UstaTop</span>
       </RouterLink>
 
-      <h1 class="auth-card__title">Kirish</h1>
-      <p class="auth-card__sub">Hisobingizga kiring</p>
+      <h1 class="auth-card__title">{{ t('Kirish') }}</h1>
+      <p class="auth-card__sub">{{ t('Hisobingizga kiring') }}</p>
 
       <div v-if="error" class="auth-error">{{ error }}</div>
 
       <form @submit.prevent="submit" class="auth-form">
         <div class="auth-field">
-          <label>Telefon raqam</label>
+          <label>{{ t('Telefon raqam') }}</label>
           <div class="auth-input-wrap">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.45 2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.37a16 16 0 0 0 5.72 5.72l.87-.87a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.04 16z"/>
@@ -49,7 +52,7 @@ const submit = async () => {
         </div>
 
         <div class="auth-field">
-          <label>Parol</label>
+          <label>{{ t('Parol') }}</label>
           <div class="auth-input-wrap">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
@@ -67,7 +70,7 @@ const submit = async () => {
 
       <p class="auth-switch">
         Hisobingiz yo'qmi?
-        <RouterLink to="/register">Ro'yxatdan o'tish</RouterLink>
+        <RouterLink :to="`/${route.params.lang || 'uz'}/register`">Ro'yxatdan o'tish</RouterLink>
       </p>
     </div>
   </div>

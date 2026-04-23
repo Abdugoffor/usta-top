@@ -1,5 +1,11 @@
 <script setup>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { Icon } from '@iconify/vue'
+
+const route = useRoute()
+const lang = computed(() => route.params.lang || 'uz')
+const a = (path) => `/${lang.value}/admin${path}`
 </script>
 
 <template>
@@ -13,43 +19,48 @@ import { Icon } from '@iconify/vue'
     </div>
 
     <nav class="sidebar__menu">
-      <RouterLink to="/admin" class="sidebar__link" exact-active-class="router-link-active">
+      <RouterLink :to="a('')" class="sidebar__link" exact-active-class="router-link-active">
         <Icon icon="mdi:view-dashboard-outline" />
         <span>Dashboard</span>
       </RouterLink>
 
       <div class="sidebar__section-label">Katalog</div>
 
-      <RouterLink to="/admin/categories" class="sidebar__link">
+      <RouterLink :to="a('/categories')" class="sidebar__link">
         <Icon icon="mdi:shape-outline" />
         <span>Kategoriyalar</span>
       </RouterLink>
 
-      <RouterLink to="/admin/countries" class="sidebar__link">
+      <RouterLink :to="a('/countries')" class="sidebar__link">
         <Icon icon="mdi:earth" />
         <span>Hududlar</span>
       </RouterLink>
 
-      <RouterLink to="/admin/languages" class="sidebar__link">
+      <RouterLink :to="a('/languages')" class="sidebar__link">
         <Icon icon="mdi:translate" />
         <span>Tillar</span>
       </RouterLink>
 
+      <RouterLink :to="a('/translations')" class="sidebar__link">
+        <Icon icon="mdi:text-box-multiple-outline" />
+        <span>Tarjimalar</span>
+      </RouterLink>
+
       <div class="sidebar__section-label">Foydalanuvchilar</div>
 
-      <RouterLink to="/admin/resumes" class="sidebar__link">
+      <RouterLink :to="a('/resumes')" class="sidebar__link">
         <Icon icon="mdi:account-box-outline" />
         <span>Resumelar</span>
       </RouterLink>
 
-      <RouterLink to="/admin/vacancies-admin" class="sidebar__link">
+      <RouterLink :to="a('/vacancies-admin')" class="sidebar__link">
         <Icon icon="mdi:briefcase-outline" />
         <span>Vakansiyalar</span>
       </RouterLink>
 
       <div class="sidebar__divider"></div>
 
-      <RouterLink to="/" class="sidebar__link sidebar__link--site">
+      <RouterLink :to="`/${lang}`" class="sidebar__link sidebar__link--site">
         <Icon icon="mdi:web" />
         <span>Saytga o'tish</span>
       </RouterLink>

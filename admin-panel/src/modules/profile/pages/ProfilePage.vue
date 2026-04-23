@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/modules/auth/store/authStore'
 import { getResumes, deleteResume } from '@/modules/client/api/resumeApi'
 import { getVacancies, deleteVacancy } from '@/modules/client/api/vacancyApi'
@@ -8,6 +8,7 @@ import ClientHeader from '@/modules/client/components/ClientHeader.vue'
 import { formatNumber } from '@/shared/utils/formatNumber'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 
 const LIMIT = 20
@@ -184,7 +185,7 @@ onMounted(() => {
         <div v-if="activeTab === 'resumes'">
           <div class="profile-section__header">
             <h2>Mening resumelarim</h2>
-            <RouterLink :to="{ name: 'resume-create' }" class="profile-create-btn">
+            <RouterLink :to="{ name: 'resume-create', params: { lang: route.params.lang } }" class="profile-create-btn">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
               </svg>
@@ -215,8 +216,8 @@ onMounted(() => {
                   <span class="profile-item__badge" :class="r.is_active ? 'badge--active' : 'badge--inactive'">
                     {{ r.is_active ? 'Faol' : 'Yopiq' }}
                   </span>
-                  <RouterLink :to="{ name: 'master-detail', params: { slug: r.slug } }" class="profile-item__view">Ko'rish</RouterLink>
-                  <RouterLink :to="{ name: 'resume-edit', params: { id: r.slug } }" class="profile-item__edit">
+                  <RouterLink :to="{ name: 'master-detail', params: { lang: route.params.lang, slug: r.slug } }" class="profile-item__view">Ko'rish</RouterLink>
+                  <RouterLink :to="{ name: 'resume-edit', params: { lang: route.params.lang, id: r.slug } }" class="profile-item__edit">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   </RouterLink>
                   <button class="profile-item__del" @click="doDeleteResume(r.id)">
@@ -242,7 +243,7 @@ onMounted(() => {
               <div class="profile-empty__icon">📄</div>
               <h3>Resumelaringiz yo'q</h3>
               <p>Birinchi resumeingizni yarating</p>
-              <RouterLink :to="{ name: 'resume-create' }" class="profile-create-btn profile-create-btn--lg">
+              <RouterLink :to="{ name: 'resume-create', params: { lang: route.params.lang } }" class="profile-create-btn profile-create-btn--lg">
                 Resume yaratish
               </RouterLink>
             </div>
@@ -253,7 +254,7 @@ onMounted(() => {
         <div v-if="activeTab === 'vacancies'">
           <div class="profile-section__header">
             <h2>Mening vakansiyalarim</h2>
-            <RouterLink :to="{ name: 'vacancy-create' }" class="profile-create-btn">
+            <RouterLink :to="{ name: 'vacancy-create', params: { lang: route.params.lang } }" class="profile-create-btn">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
               </svg>
@@ -286,8 +287,8 @@ onMounted(() => {
                   <span class="profile-item__badge" :class="v.is_active ? 'badge--active' : 'badge--inactive'">
                     {{ v.is_active ? 'Faol' : 'Yopiq' }}
                   </span>
-                  <RouterLink :to="{ name: 'vacancy-detail', params: { slug: v.slug } }" class="profile-item__view">Ko'rish</RouterLink>
-                  <RouterLink :to="{ name: 'vacancy-edit', params: { id: v.slug } }" class="profile-item__edit">
+                  <RouterLink :to="{ name: 'vacancy-detail', params: { lang: route.params.lang, slug: v.slug } }" class="profile-item__view">Ko'rish</RouterLink>
+                  <RouterLink :to="{ name: 'vacancy-edit', params: { lang: route.params.lang, id: v.slug } }" class="profile-item__edit">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   </RouterLink>
                   <button class="profile-item__del" @click="doDeleteVacancy(v.id)">
@@ -313,7 +314,7 @@ onMounted(() => {
               <div class="profile-empty__icon">📋</div>
               <h3>Vakansiyalaringiz yo'q</h3>
               <p>Birinchi vakansiyangizni e'lon qiling</p>
-              <RouterLink :to="{ name: 'vacancy-create' }" class="profile-create-btn profile-create-btn--lg">
+              <RouterLink :to="{ name: 'vacancy-create', params: { lang: route.params.lang } }" class="profile-create-btn profile-create-btn--lg">
                 Vakansiya e'lon qilish
               </RouterLink>
             </div>

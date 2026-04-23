@@ -52,7 +52,7 @@ func (s *languageService) Create(ctx context.Context, req language_dto.CreateLan
 		INSERT INTO languages (name, description, is_active)
 		VALUES ($1, $2, $3)
 		RETURNING id
-	`, req.Name, req.Description, isActive).Scan(&id)
+	`, strings.ToLower(strings.TrimSpace(req.Name)), req.Description, isActive).Scan(&id)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (s *languageService) Update(ctx context.Context, id int64, req language_dto
 
 	if req.Name != nil {
 		setClauses = append(setClauses, fmt.Sprintf("name = $%d", idx))
-		args = append(args, *req.Name)
+		args = append(args, strings.ToLower(strings.TrimSpace(*req.Name)))
 		idx++
 	}
 

@@ -10,7 +10,7 @@
             <span class="site-footer__name">Usta<strong>Top</strong></span>
           </RouterLink>
           <p class="site-footer__tagline">
-            O'zbekistondagi eng yaxshi ustalar va ish e'lonlari platformasi
+            {{ t('footer_tagline') }}
           </p>
           <div class="site-footer__socials">
             <a href="#" class="site-footer__social" aria-label="Telegram">
@@ -33,28 +33,28 @@
 
         <!-- Navigation -->
         <div class="site-footer__col">
-          <h4 class="site-footer__col-title">Navigatsiya</h4>
+          <h4 class="site-footer__col-title">{{ t('footer_nav_title') }}</h4>
           <ul class="site-footer__links">
-            <li><RouterLink to="/" class="site-footer__link">Ustalar</RouterLink></li>
-            <li><RouterLink to="/vacancies" class="site-footer__link">Vakansiyalar</RouterLink></li>
-            <li><RouterLink to="/login" class="site-footer__link">Kirish</RouterLink></li>
-            <li><RouterLink to="/register" class="site-footer__link">Ro'yxatdan o'tish</RouterLink></li>
+            <li><RouterLink to="/" class="site-footer__link">{{ t('footer_masters_link') }}</RouterLink></li>
+            <li><RouterLink to="/vacancies" class="site-footer__link">{{ t('footer_vacancies_link') }}</RouterLink></li>
+            <li><RouterLink to="/login" class="site-footer__link">{{ t('footer_login_link') }}</RouterLink></li>
+            <li><RouterLink to="/register" class="site-footer__link">{{ t('footer_register_link') }}</RouterLink></li>
           </ul>
         </div>
 
         <!-- For users -->
         <div class="site-footer__col">
-          <h4 class="site-footer__col-title">Foydalanuvchilar uchun</h4>
+          <h4 class="site-footer__col-title">{{ t('footer_for_users_title') }}</h4>
           <ul class="site-footer__links">
-            <li><RouterLink to="/profile/resumes/create" class="site-footer__link">Resume qo'shish</RouterLink></li>
-            <li><RouterLink to="/profile/vacancies/create" class="site-footer__link">Vakansiya e'lon qilish</RouterLink></li>
-            <li><RouterLink to="/profile" class="site-footer__link">Shaxsiy kabinet</RouterLink></li>
+            <li><RouterLink to="/profile/resumes/create" class="site-footer__link">{{ t('footer_add_resume') }}</RouterLink></li>
+            <li><RouterLink to="/profile/vacancies/create" class="site-footer__link">{{ t('footer_add_vacancy') }}</RouterLink></li>
+            <li><RouterLink to="/profile" class="site-footer__link">{{ t('footer_cabinet') }}</RouterLink></li>
           </ul>
         </div>
 
         <!-- Contact -->
         <div class="site-footer__col">
-          <h4 class="site-footer__col-title">Aloqa</h4>
+          <h4 class="site-footer__col-title">{{ t('footer_contact_title') }}</h4>
           <ul class="site-footer__links">
             <li>
               <a href="tel:+998901234567" class="site-footer__link site-footer__link--icon">
@@ -79,7 +79,7 @@
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1 1 18 0z"/>
                   <circle cx="12" cy="10" r="3"/>
                 </svg>
-                Toshkent, O'zbekiston
+                {{ t('footer_location') }}
               </a>
             </li>
           </ul>
@@ -88,11 +88,11 @@
 
       <!-- Bottom bar -->
       <div class="site-footer__bottom">
-        <p class="site-footer__copy">© {{ year }} UstaTop. Barcha huquqlar himoyalangan.</p>
+        <p class="site-footer__copy">© {{ year }} UstaTop. {{ t('footer_rights') }}</p>
         <div class="site-footer__bottom-links">
-          <a href="#" class="site-footer__bottom-link">Maxfiylik siyosati</a>
+          <a href="#" class="site-footer__bottom-link">{{ t('footer_privacy') }}</a>
           <span class="site-footer__dot"></span>
-          <a href="#" class="site-footer__bottom-link">Foydalanish shartlari</a>
+          <a href="#" class="site-footer__bottom-link">{{ t('footer_terms') }}</a>
         </div>
       </div>
 
@@ -101,6 +101,8 @@
 </template>
 
 <script setup>
+import { useI18n } from '@/shared/composables/useI18n'
+const { t } = useI18n()
 const year = new Date().getFullYear()
 </script>
 
