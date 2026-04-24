@@ -33,18 +33,6 @@ func NewResumeHandler(router *httprouter.Router, group string, db *pgxpool.Pool)
 	}
 }
 
-// Create godoc
-// @Summary      Yangi resume yaratish
-// @Tags         Resumes
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        body  body      resume_dto.CreateResumeRequest  true  "Resume ma'lumotlari"
-// @Success      201   {object}  resume_dto.ResumeResponse
-// @Failure      400   {object}  map[string]string
-// @Failure      401   {object}  map[string]string
-// @Failure      500   {object}  map[string]string
-// @Router       /resumes [post]
 func (h *resumeHandler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	userID := middleware.GetUserID(r)
 	{
@@ -82,28 +70,6 @@ func (h *resumeHandler) Create(w http.ResponseWriter, r *http.Request, _ httprou
 	helper.WriteJSON(w, http.StatusCreated, resp)
 }
 
-// List godoc
-// @Summary      Resumelar ro'yxati
-// @Tags         Resumes
-// @Produce      json
-// @Param        name            query     string  false  "Nomi"
-// @Param        title           query     string  false  "Sarlavha"
-// @Param        user_id         query     integer false  "Foydalanuvchi ID"
-// @Param        region_id       query     integer false  "Region ID"
-// @Param        district_id     query     integer false  "Tuman ID"
-// @Param        mahalla_id      query     integer false  "Mahalla ID"
-// @Param        category_id     query     integer false  "Kategoriya ID"
-// @Param        is_active       query     boolean false  "Faol/faolsiz"
-// @Param        min_price       query     integer false  "Minimal narx"
-// @Param        max_price       query     integer false  "Maksimal narx"
-// @Param        min_experience  query     integer false  "Minimal tajriba (yil)"
-// @Param        page            query     integer false  "Sahifa" default(1)
-// @Param        limit           query     integer false  "Limit" default(10)
-// @Param        sort_by         query     string  false  "Saralash maydoni"
-// @Param        sort_order      query     string  false  "asc yoki desc"
-// @Success      200  {object}  map[string]interface{}
-// @Failure      500  {object}  map[string]string
-// @Router       /resumes [get]
 func (h *resumeHandler) List(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	q := r.URL.Query()
 	cursor, limit := helper.ParseCursorPayload(r)
@@ -214,15 +180,6 @@ func (h *resumeHandler) List(w http.ResponseWriter, r *http.Request, _ httproute
 	})
 }
 
-// GetBySlug godoc
-// @Summary      Resumeni slug bo'yicha olish
-// @Tags         Resumes
-// @Produce      json
-// @Param        slug  path      string  true  "Resume slug"
-// @Success      200   {object}  resume_dto.ResumeResponse
-// @Failure      400   {object}  map[string]string
-// @Failure      404   {object}  map[string]string
-// @Router       /resumes/{slug} [get]
 func (h *resumeHandler) GetBySlug(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	slug := ps.ByName("slug")
 	{
@@ -243,19 +200,6 @@ func (h *resumeHandler) GetBySlug(w http.ResponseWriter, r *http.Request, ps htt
 	helper.WriteJSON(w, http.StatusOK, resp)
 }
 
-// Update godoc
-// @Summary      Resumeni yangilash
-// @Tags         Resumes
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        id    path      integer                         true  "Resume ID"
-// @Param        body  body      resume_dto.UpdateResumeRequest  true  "Yangi ma'lumotlar"
-// @Success      200   {object}  resume_dto.ResumeResponse
-// @Failure      400   {object}  map[string]string
-// @Failure      401   {object}  map[string]string
-// @Failure      404   {object}  map[string]string
-// @Router       /resumes/{id} [put]
 func (h *resumeHandler) Update(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	userID := middleware.GetUserID(r)
 	{
@@ -297,17 +241,6 @@ func (h *resumeHandler) Update(w http.ResponseWriter, r *http.Request, ps httpro
 	helper.WriteJSON(w, http.StatusOK, resp)
 }
 
-// Delete godoc
-// @Summary      Resumeni o'chirish
-// @Tags         Resumes
-// @Produce      json
-// @Security     BearerAuth
-// @Param        id   path      integer  true  "Resume ID"
-// @Success      200  {object}  map[string]string
-// @Failure      400  {object}  map[string]string
-// @Failure      401  {object}  map[string]string
-// @Failure      404  {object}  map[string]string
-// @Router       /resumes/{id} [delete]
 func (h *resumeHandler) Delete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	userID := middleware.GetUserID(r)
 	{
@@ -333,19 +266,6 @@ func (h *resumeHandler) Delete(w http.ResponseWriter, r *http.Request, ps httpro
 	helper.WriteJSON(w, http.StatusOK, map[string]string{"message": "deleted"})
 }
 
-// AddCategory godoc
-// @Summary      Resumega kategoriya qo'shish
-// @Tags         Resumes
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        id    path      integer                    true  "Resume ID"
-// @Param        body  body      object{category_id=integer}  true  "Kategoriya ID"
-// @Success      200   {object}  map[string]string
-// @Failure      400   {object}  map[string]string
-// @Failure      401   {object}  map[string]string
-// @Failure      500   {object}  map[string]string
-// @Router       /resumes/{id}/categories [post]
 func (h *resumeHandler) AddCategory(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
 	{
@@ -377,18 +297,6 @@ func (h *resumeHandler) AddCategory(w http.ResponseWriter, r *http.Request, ps h
 	helper.WriteJSON(w, http.StatusOK, map[string]string{"message": "category added"})
 }
 
-// RemoveCategory godoc
-// @Summary      Resumedan kategoriyani olib tashlash
-// @Tags         Resumes
-// @Produce      json
-// @Security     BearerAuth
-// @Param        id      path      integer  true  "Resume ID"
-// @Param        cat_id  path      integer  true  "Kategoriya ID"
-// @Success      200     {object}  map[string]string
-// @Failure      400     {object}  map[string]string
-// @Failure      401     {object}  map[string]string
-// @Failure      404     {object}  map[string]string
-// @Router       /resumes/{id}/categories/{cat_id} [delete]
 func (h *resumeHandler) RemoveCategory(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
 	{

@@ -31,18 +31,6 @@ func NewCountryHandler(router *httprouter.Router, group string, db *pgxpool.Pool
 	}
 }
 
-// Create godoc
-// @Summary      Yangi mamlakat yaratish
-// @Tags         Countries
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        body  body      country_dto.CreateCountryRequest  true  "Mamlakat ma'lumotlari"
-// @Success      201   {object}  country_dto.CountryResponse
-// @Failure      400   {object}  map[string]string
-// @Failure      401   {object}  map[string]string
-// @Failure      500   {object}  map[string]string
-// @Router       /countries [post]
 func (h *countryHandler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var req country_dto.CreateCountryRequest
 	{
@@ -71,20 +59,6 @@ func (h *countryHandler) Create(w http.ResponseWriter, r *http.Request, _ httpro
 	helper.WriteJSON(w, http.StatusCreated, resp)
 }
 
-// List godoc
-// @Summary      Mamlakatlar ro'yxati
-// @Tags         Countries
-// @Produce      json
-// @Param        name        query     string  false  "Nomi bo'yicha filter"
-// @Param        parent_id   query     integer false  "Parent ID"
-// @Param        is_active   query     boolean false  "Faol/faolsiz"
-// @Param        page        query     integer false  "Sahifa" default(1)
-// @Param        limit       query     integer false  "Limit" default(10)
-// @Param        sort_by     query     string  false  "Saralash maydoni"
-// @Param        sort_order  query     string  false  "asc yoki desc"
-// @Success      200  {object}  map[string]interface{}
-// @Failure      500  {object}  map[string]string
-// @Router       /countries [get]
 func (h *countryHandler) List(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	q := r.URL.Query()
 	afterID, limit := helper.ParseCursorPage(r)
@@ -125,15 +99,6 @@ func (h *countryHandler) List(w http.ResponseWriter, r *http.Request, _ httprout
 	})
 }
 
-// GetByID godoc
-// @Summary      Mamlakatni ID bo'yicha olish
-// @Tags         Countries
-// @Produce      json
-// @Param        id   path      integer  true  "Mamlakat ID"
-// @Success      200  {object}  country_dto.CountryResponse
-// @Failure      400  {object}  map[string]string
-// @Failure      404  {object}  map[string]string
-// @Router       /countries/{id} [get]
 func (h *countryHandler) GetByID(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
 	{
@@ -154,19 +119,6 @@ func (h *countryHandler) GetByID(w http.ResponseWriter, r *http.Request, ps http
 	helper.WriteJSON(w, http.StatusOK, resp)
 }
 
-// Update godoc
-// @Summary      Mamlakatni yangilash
-// @Tags         Countries
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        id    path      integer                           true  "Mamlakat ID"
-// @Param        body  body      country_dto.UpdateCountryRequest  true  "Yangi ma'lumotlar"
-// @Success      200   {object}  country_dto.CountryResponse
-// @Failure      400   {object}  map[string]string
-// @Failure      401   {object}  map[string]string
-// @Failure      404   {object}  map[string]string
-// @Router       /countries/{id} [put]
 func (h *countryHandler) Update(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
 	{
@@ -205,17 +157,6 @@ func (h *countryHandler) Update(w http.ResponseWriter, r *http.Request, ps httpr
 	helper.WriteJSON(w, http.StatusOK, resp)
 }
 
-// Delete godoc
-// @Summary      Mamlakatni o'chirish
-// @Tags         Countries
-// @Produce      json
-// @Security     BearerAuth
-// @Param        id   path      integer  true  "Mamlakat ID"
-// @Success      200  {object}  map[string]string
-// @Failure      400  {object}  map[string]string
-// @Failure      401  {object}  map[string]string
-// @Failure      404  {object}  map[string]string
-// @Router       /countries/{id} [delete]
 func (h *countryHandler) Delete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
 	{

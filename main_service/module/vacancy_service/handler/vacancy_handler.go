@@ -31,18 +31,6 @@ func NewVacancyHandler(router *httprouter.Router, group string, db *pgxpool.Pool
 	}
 }
 
-// Create godoc
-// @Summary      Yangi vakansiya yaratish
-// @Tags         Vacancies
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        body  body      vacancy_dto.CreateVacancyRequest  true  "Vakansiya ma'lumotlari"
-// @Success      201   {object}  vacancy_dto.VacancyResponse
-// @Failure      400   {object}  map[string]string
-// @Failure      401   {object}  map[string]string
-// @Failure      500   {object}  map[string]string
-// @Router       /vacancies [post]
 func (h *vacancyHandler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	userID := middleware.GetUserID(r)
 	if userID == 0 {
@@ -74,28 +62,6 @@ func (h *vacancyHandler) Create(w http.ResponseWriter, r *http.Request, _ httpro
 	helper.WriteJSON(w, http.StatusCreated, resp)
 }
 
-// List godoc
-// @Summary      Vakansiyalar ro'yxati
-// @Tags         Vacancies
-// @Produce      json
-// @Param        name         query     string  false  "Nomi"
-// @Param        title        query     string  false  "Sarlavha"
-// @Param        user_id      query     integer false  "Foydalanuvchi ID"
-// @Param        region_id    query     integer false  "Region ID"
-// @Param        district_id  query     integer false  "Tuman ID"
-// @Param        mahalla_id   query     integer false  "Mahalla ID"
-// @Param        category_id  query     integer false  "Kategoriya ID"
-// @Param        category_ids query     string  false  "Kategoriya ID lar (vergul bilan)"
-// @Param        is_active    query     boolean false  "Faol/faolsiz"
-// @Param        min_price    query     integer false  "Minimal narx"
-// @Param        max_price    query     integer false  "Maksimal narx"
-// @Param        page         query     integer false  "Sahifa" default(1)
-// @Param        limit        query     integer false  "Limit" default(10)
-// @Param        sort_by      query     string  false  "Saralash maydoni"
-// @Param        sort_order   query     string  false  "asc yoki desc"
-// @Success      200  {object}  map[string]interface{}
-// @Failure      500  {object}  map[string]string
-// @Router       /vacancies [get]
 func (h *vacancyHandler) List(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	q := r.URL.Query()
 	cursor, limit := helper.ParseCursorPayload(r)
@@ -194,15 +160,6 @@ func (h *vacancyHandler) List(w http.ResponseWriter, r *http.Request, _ httprout
 	})
 }
 
-// GetBySlug godoc
-// @Summary      Vakansiyani slug bo'yicha olish
-// @Tags         Vacancies
-// @Produce      json
-// @Param        slug  path      string  true  "Vakansiya slug"
-// @Success      200   {object}  vacancy_dto.VacancyResponse
-// @Failure      400   {object}  map[string]string
-// @Failure      404   {object}  map[string]string
-// @Router       /vacancies/{slug} [get]
 func (h *vacancyHandler) GetBySlug(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	slug := ps.ByName("slug")
 	if slug == "" {
@@ -219,19 +176,6 @@ func (h *vacancyHandler) GetBySlug(w http.ResponseWriter, r *http.Request, ps ht
 	helper.WriteJSON(w, http.StatusOK, resp)
 }
 
-// Update godoc
-// @Summary      Vakansiyani yangilash
-// @Tags         Vacancies
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        id    path      integer                           true  "Vakansiya ID"
-// @Param        body  body      vacancy_dto.UpdateVacancyRequest  true  "Yangi ma'lumotlar"
-// @Success      200   {object}  vacancy_dto.VacancyResponse
-// @Failure      400   {object}  map[string]string
-// @Failure      401   {object}  map[string]string
-// @Failure      404   {object}  map[string]string
-// @Router       /vacancies/{id} [put]
 func (h *vacancyHandler) Update(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	userID := middleware.GetUserID(r)
 	if userID == 0 {
@@ -278,17 +222,6 @@ func (h *vacancyHandler) Update(w http.ResponseWriter, r *http.Request, ps httpr
 	helper.WriteJSON(w, http.StatusOK, resp)
 }
 
-// Delete godoc
-// @Summary      Vakansiyani o'chirish
-// @Tags         Vacancies
-// @Produce      json
-// @Security     BearerAuth
-// @Param        id   path      integer  true  "Vakansiya ID"
-// @Success      200  {object}  map[string]string
-// @Failure      400  {object}  map[string]string
-// @Failure      401  {object}  map[string]string
-// @Failure      404  {object}  map[string]string
-// @Router       /vacancies/{id} [delete]
 func (h *vacancyHandler) Delete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	userID := middleware.GetUserID(r)
 	if userID == 0 {

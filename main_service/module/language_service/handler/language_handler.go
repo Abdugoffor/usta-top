@@ -19,31 +19,78 @@ type languageHandler struct {
 }
 
 func NewLanguageHandler(router *httprouter.Router, group string, db *pgxpool.Pool) {
-	h := &languageHandler{service: language_service.NewLanguageService(db)}
+	handler := &languageHandler{service: language_service.NewLanguageService(db)}
 
 	routes := group + "/languages"
 	{
-		router.POST(routes, middleware.CheckRole(h.Create))
-		router.GET(routes, h.List)
-		router.GET(routes+"/:id", h.GetByID)
-		router.PUT(routes+"/:id", middleware.CheckRole(h.Update))
-		router.DELETE(routes+"/:id", middleware.CheckRole(h.Delete))
+		router.GET(routes, middleware.CheckRole(handler.All, "admin"))
+		router.GET(routes+"/:id", middleware.CheckRole(handler.Show, "admin"))
+		router.POST(routes, middleware.CheckRole(handler.Create, "admin"))
+		router.PUT(routes+"/:id", middleware.CheckRole(handler.Update, "admin"))
+		router.DELETE(routes+"/:id", middleware.CheckRole(handler.Delete, "admin"))
 	}
 }
 
-// Create godoc
-// @Summary      Yangi til yaratish
-// @Tags         Languages
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        body  body      language_dto.CreateLanguageRequest  true  "Til ma'lumotlari"
-// @Success      201   {object}  language_dto.LanguageResponse
-// @Failure      400   {object}  map[string]string
-// @Failure      401   {object}  map[string]string
-// @Failure      500   {object}  map[string]string
-// @Router       /languages [post]
-func (h *languageHandler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (handler *languageHandler) All(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	q := r.URL.Query()
+
+	afterID, limit := helper.ParseCursorPage(r)
+
+	name := q.Get("name")
+
+	if len(name) > 100 {
+		name = name[:100]
+	}
+	f := language_dto.LanguageFilter{Name: name}
+
+	if v := q.Get("is_active"); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			f.IsActive = &b
+		}
+	}
+
+	items, hasMore, err := handler.service.All(r.Context(), f, afterID, limit)
+	{
+		if err != nil {
+			helper.WriteInternalError(w, err)
+			return
+		}
+	}
+
+	var lastID int64
+	{
+		if len(items) > 0 {
+			lastID = items[len(items)-1].ID
+		}
+	}
+
+	helper.WriteJSON(w, http.StatusOK, map[string]any{
+		"data": items,
+		"meta": helper.NewCursorMeta(limit, hasMore, lastID, 0),
+	})
+}
+
+func (handler *languageHandler) Show(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
+	{
+		if err != nil || id <= 0 {
+			helper.WriteError(w, http.StatusBadRequest, "invalid id")
+			return
+		}
+	}
+
+	resp, err := handler.service.Show(r.Context(), id)
+	{
+		if err != nil {
+			helper.WriteError(w, http.StatusNotFound, "language not found")
+			return
+		}
+	}
+
+	helper.WriteJSON(w, http.StatusOK, resp)
+}
+
+func (handler *languageHandler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var req language_dto.CreateLanguageRequest
 	{
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -60,7 +107,7 @@ func (h *languageHandler) Create(w http.ResponseWriter, r *http.Request, _ httpr
 		}
 	}
 
-	resp, err := h.service.Create(r.Context(), req)
+	resp, err := handler.service.Create(r.Context(), req)
 	{
 		if err != nil {
 			helper.WriteInternalError(w, err)
@@ -71,95 +118,7 @@ func (h *languageHandler) Create(w http.ResponseWriter, r *http.Request, _ httpr
 	helper.WriteJSON(w, http.StatusCreated, resp)
 }
 
-// List godoc
-// @Summary      Tillar ro'yxati
-// @Tags         Languages
-// @Produce      json
-// @Param        name        query     string  false  "Nomi bo'yicha filter"
-// @Param        is_active   query     boolean false  "Faol/faolsiz"
-// @Param        page        query     integer false  "Sahifa" default(1)
-// @Param        limit       query     integer false  "Limit" default(10)
-// @Param        sort_by     query     string  false  "Saralash maydoni (id, name, is_active, created_at, updated_at)"
-// @Param        sort_order  query     string  false  "asc yoki desc"
-// @Success      200  {object}  map[string]interface{}
-// @Failure      500  {object}  map[string]string
-// @Router       /languages [get]
-func (h *languageHandler) List(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	q := r.URL.Query()
-	afterID, limit := helper.ParseCursorPage(r)
-
-	name := q.Get("name")
-	if len(name) > 100 {
-		name = name[:100]
-	}
-	f := language_dto.LanguageFilter{Name: name}
-
-	if v := q.Get("is_active"); v != "" {
-		if b, err := strconv.ParseBool(v); err == nil {
-			f.IsActive = &b
-		}
-	}
-
-	items, hasMore, err := h.service.List(r.Context(), f, afterID, limit)
-	if err != nil {
-		helper.WriteInternalError(w, err)
-		return
-	}
-
-	var lastID int64
-	if len(items) > 0 {
-		lastID = items[len(items)-1].ID
-	}
-
-	helper.WriteJSON(w, http.StatusOK, map[string]any{
-		"data": items,
-		"meta": helper.NewCursorMeta(limit, hasMore, lastID, 0),
-	})
-}
-
-// GetByID godoc
-// @Summary      Tilni ID bo'yicha olish
-// @Tags         Languages
-// @Produce      json
-// @Param        id   path      integer  true  "Til ID"
-// @Success      200  {object}  language_dto.LanguageResponse
-// @Failure      400  {object}  map[string]string
-// @Failure      404  {object}  map[string]string
-// @Router       /languages/{id} [get]
-func (h *languageHandler) GetByID(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
-	{
-		if err != nil || id <= 0 {
-			helper.WriteError(w, http.StatusBadRequest, "invalid id")
-			return
-		}
-	}
-
-	resp, err := h.service.GetByID(r.Context(), id)
-	{
-		if err != nil {
-			helper.WriteError(w, http.StatusNotFound, "language not found")
-			return
-		}
-	}
-
-	helper.WriteJSON(w, http.StatusOK, resp)
-}
-
-// Update godoc
-// @Summary      Tilni yangilash
-// @Tags         Languages
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        id    path      integer                             true  "Til ID"
-// @Param        body  body      language_dto.UpdateLanguageRequest  true  "Yangi ma'lumotlar"
-// @Success      200   {object}  language_dto.LanguageResponse
-// @Failure      400   {object}  map[string]string
-// @Failure      401   {object}  map[string]string
-// @Failure      404   {object}  map[string]string
-// @Router       /languages/{id} [put]
-func (h *languageHandler) Update(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (handler *languageHandler) Update(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
 	{
 		if err != nil || id <= 0 {
@@ -186,7 +145,7 @@ func (h *languageHandler) Update(w http.ResponseWriter, r *http.Request, ps http
 		return
 	}
 
-	resp, err := h.service.Update(r.Context(), id, req)
+	resp, err := handler.service.Update(r.Context(), id, req)
 	{
 		if err != nil {
 			helper.WriteError(w, http.StatusNotFound, "language not found")
@@ -197,18 +156,7 @@ func (h *languageHandler) Update(w http.ResponseWriter, r *http.Request, ps http
 	helper.WriteJSON(w, http.StatusOK, resp)
 }
 
-// Delete godoc
-// @Summary      Tilni o'chirish
-// @Tags         Languages
-// @Produce      json
-// @Security     BearerAuth
-// @Param        id   path      integer  true  "Til ID"
-// @Success      200  {object}  map[string]string
-// @Failure      400  {object}  map[string]string
-// @Failure      401  {object}  map[string]string
-// @Failure      404  {object}  map[string]string
-// @Router       /languages/{id} [delete]
-func (h *languageHandler) Delete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (handler *languageHandler) Delete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
 	{
 		if err != nil || id <= 0 {
@@ -217,7 +165,7 @@ func (h *languageHandler) Delete(w http.ResponseWriter, r *http.Request, ps http
 		}
 	}
 
-	if err := h.service.Delete(r.Context(), id); err != nil {
+	if err := handler.service.Delete(r.Context(), id); err != nil {
 		helper.WriteError(w, http.StatusNotFound, err.Error())
 		return
 	}

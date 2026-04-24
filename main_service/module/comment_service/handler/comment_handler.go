@@ -30,19 +30,6 @@ func NewCommentHandler(router *httprouter.Router, group string, db *pgxpool.Pool
 	}
 }
 
-// Create godoc
-// @Summary      Yangi izoh qo'shish
-// @Tags         Comments
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        body  body      comment_dto.CreateCommentRequest  true  "Izoh ma'lumotlari"
-// @Success      201   {object}  comment_dto.CommentResponse
-// @Failure      400   {object}  map[string]string
-// @Failure      401   {object}  map[string]string
-// @Failure      422   {object}  map[string]string
-// @Failure      500   {object}  map[string]string
-// @Router       /comments [post]
 func (h *commentHandler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	userID := middleware.GetUserID(r)
 	if userID == 0 {
@@ -79,21 +66,6 @@ func (h *commentHandler) Create(w http.ResponseWriter, r *http.Request, _ httpro
 	helper.WriteJSON(w, http.StatusCreated, resp)
 }
 
-// List godoc
-// @Summary      Izohlar ro'yxati
-// @Tags         Comments
-// @Produce      json
-// @Param        vakansiya_id  query     integer false  "Vakansiya ID"
-// @Param        resume_id     query     integer false  "Resume ID"
-// @Param        user_id       query     integer false  "Foydalanuvchi ID"
-// @Param        type          query     string  false  "comment yoki review"
-// @Param        page          query     integer false  "Sahifa" default(1)
-// @Param        limit         query     integer false  "Limit" default(20)
-// @Param        sort_by       query     string  false  "Saralash maydoni (id, type, created_at, updated_at)"
-// @Param        sort_order    query     string  false  "asc yoki desc"
-// @Success      200  {object}  map[string]interface{}
-// @Failure      500  {object}  map[string]string
-// @Router       /comments [get]
 func (h *commentHandler) List(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	q := r.URL.Query()
 	pq := helper.ParsePage(r)
@@ -138,15 +110,6 @@ func (h *commentHandler) List(w http.ResponseWriter, r *http.Request, _ httprout
 	})
 }
 
-// GetByID godoc
-// @Summary      Izohni ID bo'yicha olish
-// @Tags         Comments
-// @Produce      json
-// @Param        id   path      integer  true  "Izoh ID"
-// @Success      200  {object}  comment_dto.CommentResponse
-// @Failure      400  {object}  map[string]string
-// @Failure      404  {object}  map[string]string
-// @Router       /comments/{id} [get]
 func (h *commentHandler) GetByID(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
@@ -168,19 +131,6 @@ func (h *commentHandler) GetByID(w http.ResponseWriter, r *http.Request, ps http
 	helper.WriteJSON(w, http.StatusOK, resp)
 }
 
-// Update godoc
-// @Summary      Izohni yangilash
-// @Tags         Comments
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        id    path      integer                           true  "Izoh ID"
-// @Param        body  body      comment_dto.UpdateCommentRequest  true  "Yangi ma'lumotlar"
-// @Success      200   {object}  comment_dto.CommentResponse
-// @Failure      400   {object}  map[string]string
-// @Failure      401   {object}  map[string]string
-// @Failure      404   {object}  map[string]string
-// @Router       /comments/{id} [put]
 func (h *commentHandler) Update(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	
 	userID := middleware.GetUserID(r)
@@ -223,17 +173,6 @@ func (h *commentHandler) Update(w http.ResponseWriter, r *http.Request, ps httpr
 	helper.WriteJSON(w, http.StatusOK, resp)
 }
 
-// Delete godoc
-// @Summary      Izohni o'chirish
-// @Tags         Comments
-// @Produce      json
-// @Security     BearerAuth
-// @Param        id   path      integer  true  "Izoh ID"
-// @Success      200  {object}  map[string]string
-// @Failure      400  {object}  map[string]string
-// @Failure      401  {object}  map[string]string
-// @Failure      404  {object}  map[string]string
-// @Router       /comments/{id} [delete]
 func (h *commentHandler) Delete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	userID := middleware.GetUserID(r)
 	{

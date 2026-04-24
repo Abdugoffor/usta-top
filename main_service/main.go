@@ -1,29 +1,9 @@
-// @title           Usta Top API
-// @version         1.0
-// @description     Usta Top - vakansiya va resume platformasi API
-// @termsOfService  http://swagger.io/terms/
-
-// @contact.name   API Support
-// @contact.email  support@usta-top.uz
-
-// @license.name  Apache 2.0
-// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
-
-// @host      localhost:8080
-// @BasePath  /api/v1
-
-// @securityDefinitions.apikey BearerAuth
-// @in header
-// @name Authorization
-// @description Type "Bearer" followed by a space and JWT token.
-
 package main
 
 import (
 	"fmt"
 	"log"
 	"main_service/config"
-	_ "main_service/docs"
 	"main_service/helper"
 	"main_service/middleware"
 	categorya_cmd "main_service/module/categorya_service"
@@ -39,7 +19,6 @@ import (
 	"os"
 
 	"github.com/julienschmidt/httprouter"
-	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 func main() {
@@ -78,7 +57,6 @@ func main() {
 	}
 
 	router.ServeFiles("/uploads/*filepath", http.Dir("uploads"))
-	router.HandlerFunc(http.MethodGet, "/swagger/*filepath", httpSwagger.WrapHandler)
 
 	port := helper.ENV("APP_PORT")
 	{
@@ -97,8 +75,5 @@ func main() {
 	)
 
 	log.Printf("🚀 Server started on :%s", port)
-	log.Printf("📖 Swagger UI: http://localhost:%s/swagger/index.html", port)
 	log.Fatal(http.ListenAndServe(":"+port, handler))
-	// log.Printf("📖 Swagger UI: http://172.20.10.13:%s/swagger/index.html", port)
-	// log.Fatal(http.ListenAndServe("0.0.0.0:"+port, middleware.CORS(router)))
 }

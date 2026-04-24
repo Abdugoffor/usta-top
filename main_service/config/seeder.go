@@ -47,9 +47,7 @@ func SeedVacanciesAndResumes() {
 
 	rand.Seed(time.Now().UnixNano())
 
-	// ==========================
 	// RESUMES
-	// ==========================
 	for i := 1; i <= 1000000; i++ {
 		firstName := firstNames[rand.Intn(len(firstNames))]
 		lastName := lastNames[rand.Intn(len(lastNames))]
@@ -131,9 +129,7 @@ func SeedVacanciesAndResumes() {
 		}
 	}
 
-	// ==========================
 	// VACANCIES
-	// ==========================
 	for i := 1; i <= 5000; i++ {
 		firstName := firstNames[rand.Intn(len(firstNames))]
 		lastName := lastNames[rand.Intn(len(lastNames))]

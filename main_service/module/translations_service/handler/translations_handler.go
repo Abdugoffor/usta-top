@@ -35,16 +35,6 @@ func NewTranslationHandler(router *httprouter.Router, group string, db *pgxpool.
 	router.GET(group+"/t", h.GetTranslation)
 }
 
-// GetTranslation godoc
-// @Summary      Frontend uchun tarjima olish
-// @Description  key (slug) va lang bo'yicha tarjimani qaytaradi. lang yo'q bo'lsa default ishlatiladi. Agar tarjima topilmasa key qaytariladi.
-// @Tags         Translations
-// @Produce      json
-// @Param        key   query     string  true   "Translation slug (kalit)"
-// @Param        lang  query     string  false  "Til kodi (uz, ru, en ...)"
-// @Success      200   {object}  translation_dto.TranslationKeyResponse
-// @Failure      400   {object}  map[string]string
-// @Router       /t [get]
 func (h *translationHandler) GetTranslation(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	key := strings.TrimSpace(r.URL.Query().Get("key"))
 	if key == "" {
@@ -66,18 +56,6 @@ func (h *translationHandler) GetTranslation(w http.ResponseWriter, r *http.Reque
 	})
 }
 
-// Create godoc
-// @Summary      Yangi translation yaratish
-// @Tags         Translations
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        body  body      translation_dto.CreateTranslationRequest  true  "Translation ma'lumotlari"
-// @Success      201   {object}  translation_dto.TranslationResponse
-// @Failure      400   {object}  map[string]string
-// @Failure      401   {object}  map[string]string
-// @Failure      500   {object}  map[string]string
-// @Router       /translations [post]
 func (h *translationHandler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var req translation_dto.CreateTranslationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -101,18 +79,6 @@ func (h *translationHandler) Create(w http.ResponseWriter, r *http.Request, _ ht
 	helper.WriteJSON(w, http.StatusCreated, resp)
 }
 
-// List godoc
-// @Summary      Translationlar ro'yxati
-// @Tags         Translations
-// @Produce      json
-// @Param        slug        query     string  false  "Slug bo'yicha filter"
-// @Param        name        query     string  false  "Name bo'yicha filter"
-// @Param        is_active   query     boolean false  "Faol/faolsiz"
-// @Param        page        query     integer false  "Sahifa" default(1)
-// @Param        limit       query     integer false  "Limit" default(10)
-// @Success      200  {object}  map[string]interface{}
-// @Failure      500  {object}  map[string]string
-// @Router       /translations [get]
 func (h *translationHandler) List(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	q := r.URL.Query()
 	afterID, limit := helper.ParseCursorPage(r)
@@ -155,15 +121,6 @@ func (h *translationHandler) List(w http.ResponseWriter, r *http.Request, _ http
 	})
 }
 
-// GetByID godoc
-// @Summary      Translationni ID bo'yicha olish
-// @Tags         Translations
-// @Produce      json
-// @Param        id   path      integer  true  "Translation ID"
-// @Success      200  {object}  translation_dto.TranslationResponse
-// @Failure      400  {object}  map[string]string
-// @Failure      404  {object}  map[string]string
-// @Router       /translations/{id} [get]
 func (h *translationHandler) GetByID(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
 	if err != nil || id <= 0 {
@@ -180,19 +137,6 @@ func (h *translationHandler) GetByID(w http.ResponseWriter, r *http.Request, ps 
 	helper.WriteJSON(w, http.StatusOK, resp)
 }
 
-// Update godoc
-// @Summary      Translationni yangilash
-// @Tags         Translations
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        id    path      integer                                true  "Translation ID"
-// @Param        body  body      translation_dto.UpdateTranslationRequest  true  "Yangi ma'lumotlar"
-// @Success      200   {object}  translation_dto.TranslationResponse
-// @Failure      400   {object}  map[string]string
-// @Failure      401   {object}  map[string]string
-// @Failure      404   {object}  map[string]string
-// @Router       /translations/{id} [put]
 func (h *translationHandler) Update(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
 	if err != nil || id <= 0 {
@@ -225,17 +169,6 @@ func (h *translationHandler) Update(w http.ResponseWriter, r *http.Request, ps h
 	helper.WriteJSON(w, http.StatusOK, resp)
 }
 
-// Delete godoc
-// @Summary      Translationni o'chirish
-// @Tags         Translations
-// @Produce      json
-// @Security     BearerAuth
-// @Param        id   path      integer  true  "Translation ID"
-// @Success      200  {object}  map[string]string
-// @Failure      400  {object}  map[string]string
-// @Failure      401  {object}  map[string]string
-// @Failure      404  {object}  map[string]string
-// @Router       /translations/{id} [delete]
 func (h *translationHandler) Delete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
 	if err != nil || id <= 0 {

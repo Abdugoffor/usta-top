@@ -32,18 +32,6 @@ func NewCategoryHandler(router *httprouter.Router, group string, db *pgxpool.Poo
 	router.GET(group+"/active-categories", h.ListActive)
 }
 
-// Create godoc
-// @Summary      Yangi kategoriya yaratish
-// @Tags         Categories
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        body  body      categorya_dto.CreateCategoryRequest  true  "Kategoriya ma'lumotlari"
-// @Success      201   {object}  categorya_dto.CategoryResponse
-// @Failure      400   {object}  map[string]string
-// @Failure      401   {object}  map[string]string
-// @Failure      500   {object}  map[string]string
-// @Router       /categories [post]
 func (h *categoryHandler) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var req categorya_dto.CreateCategoryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -65,17 +53,6 @@ func (h *categoryHandler) Create(w http.ResponseWriter, r *http.Request, _ httpr
 	helper.WriteJSON(w, http.StatusCreated, resp)
 }
 
-// List godoc
-// @Summary      Kategoriyalar ro'yxati
-// @Tags         Categories
-// @Produce      json
-// @Param        name        query     string  false  "Nomi bo'yicha filter"
-// @Param        is_active   query     boolean false  "Faol/faolsiz"
-// @Param        page        query     integer false  "Sahifa" default(1)
-// @Param        limit       query     integer false  "Limit" default(10)
-// @Success      200  {object}  map[string]interface{}
-// @Failure      500  {object}  map[string]string
-// @Router       /categories [get]
 func (h *categoryHandler) List(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	q := r.URL.Query()
 	afterID, limit := helper.ParseCursorPage(r)
@@ -109,15 +86,6 @@ func (h *categoryHandler) List(w http.ResponseWriter, r *http.Request, _ httprou
 	})
 }
 
-// ListActive godoc
-// @Summary      Faol kategoriyalar (tilga qarab)
-// @Description  Faol kategoriyalarni berilgan tilda qaytaradi. Agar o'sha tilda nom bo'lmasa, default qiymati qaytariladi.
-// @Tags         Categories
-// @Produce      json
-// @Param        lang  query     string  false  "Til kodi (uz, ru, en ...). Default: default"
-// @Success      200   {object}  map[string]interface{}
-// @Failure      500   {object}  map[string]string
-// @Router       /active-categories [get]
 func (h *categoryHandler) ListActive(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	lang := r.URL.Query().Get("lang")
 
@@ -132,15 +100,6 @@ func (h *categoryHandler) ListActive(w http.ResponseWriter, r *http.Request, _ h
 	})
 }
 
-// GetByID godoc
-// @Summary      Kategoriyani ID bo'yicha olish
-// @Tags         Categories
-// @Produce      json
-// @Param        id   path      integer  true  "Kategoriya ID"
-// @Success      200  {object}  categorya_dto.CategoryResponse
-// @Failure      400  {object}  map[string]string
-// @Failure      404  {object}  map[string]string
-// @Router       /categories/{id} [get]
 func (h *categoryHandler) GetByID(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
 	if err != nil || id <= 0 {
@@ -157,19 +116,6 @@ func (h *categoryHandler) GetByID(w http.ResponseWriter, r *http.Request, ps htt
 	helper.WriteJSON(w, http.StatusOK, resp)
 }
 
-// Update godoc
-// @Summary      Kategoriyani yangilash
-// @Tags         Categories
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        id    path      integer                              true  "Kategoriya ID"
-// @Param        body  body      categorya_dto.UpdateCategoryRequest  true  "Yangi ma'lumotlar"
-// @Success      200   {object}  categorya_dto.CategoryResponse
-// @Failure      400   {object}  map[string]string
-// @Failure      401   {object}  map[string]string
-// @Failure      404   {object}  map[string]string
-// @Router       /categories/{id} [put]
 func (h *categoryHandler) Update(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
 	if err != nil || id <= 0 {
@@ -197,17 +143,6 @@ func (h *categoryHandler) Update(w http.ResponseWriter, r *http.Request, ps http
 	helper.WriteJSON(w, http.StatusOK, resp)
 }
 
-// Delete godoc
-// @Summary      Kategoriyani o'chirish
-// @Tags         Categories
-// @Produce      json
-// @Security     BearerAuth
-// @Param        id   path      integer  true  "Kategoriya ID"
-// @Success      200  {object}  map[string]string
-// @Failure      400  {object}  map[string]string
-// @Failure      401  {object}  map[string]string
-// @Failure      404  {object}  map[string]string
-// @Router       /categories/{id} [delete]
 func (h *categoryHandler) Delete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.ParseInt(ps.ByName("id"), 10, 64)
 	if err != nil || id <= 0 {

@@ -27,18 +27,6 @@ func NewUploadHandler(router *httprouter.Router, group string) {
 	router.POST(group+"/upload", middleware.CheckRole(upload))
 }
 
-// Upload godoc
-// @Summary      Rasm yuklash
-// @Tags         Upload
-// @Accept       multipart/form-data
-// @Produce      json
-// @Security     BearerAuth
-// @Param        photo  formData  file  true  "Rasm fayl (max 3MB, jpeg/png/gif/webp)"
-// @Success      200    {object}  map[string]string
-// @Failure      400    {object}  map[string]string
-// @Failure      401    {object}  map[string]string
-// @Failure      500    {object}  map[string]string
-// @Router       /upload [post]
 func upload(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
 	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
